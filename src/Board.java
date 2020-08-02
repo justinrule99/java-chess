@@ -1,6 +1,9 @@
 import com.sun.security.jgss.GSSUtil;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Stack;
 
 public class Board {
     // represents a standard chess board
@@ -16,8 +19,31 @@ public class Board {
     public static final String ANSI_WHITE = "\u001B[37m";
 
     // 2d array of squares: will have piece info
+    // need move history in stack
     private Square[][] squares;
     private int moveNumber;
+    private boolean whiteToMove;
+    private ArrayList<Move> moveHistory;
+
+    //TODO: ctor to create new board based on given position
+
+    public Board(Board b) {
+        // shallow copy
+        squares = new Square[8][8];
+
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                Square s = new Square(b.squares[i][j].isWhite(), b.squares[i][j].getCurrentPiece(), b.squares[i][j].rank, b.squares[i][j].file);
+                squares[i][j] = s;
+            }
+        }
+        moveHistory = new ArrayList<>();
+        // b move history is always empty
+        // need to copy moveHistory
+        this.moveHistory.addAll(b.moveHistory);
+        moveNumber = b.moveNumber;
+        whiteToMove = b.whiteToMove;
+    }
 
     // initialize the game with pieces on starting squares
     public Board() {
@@ -28,6 +54,8 @@ public class Board {
         // SQUARE, NOT PIECE
         boolean isWhite = true;
         moveNumber = 0;
+        whiteToMove = true;
+        moveHistory = new ArrayList<>();
         // ranks Bot to top
         // need so that squares[2][3] gives piece on d3
         // now gives piece on d5
@@ -58,25 +86,10 @@ public class Board {
         }
     }
 
-    public void setSquare(String code, Piece newPiece) {
-        // convert at "d4" to newPiece (used by engine later)
-        int file = (int) code.charAt(0) - 96;
-        int rank = (int) code.charAt(1) - 48;
-        // flip rank index ex: 4 to 4 or 2 to 6
-        int correctRank = (9-rank);
-        squares[correctRank-1][file-1].setCurrentPiece(newPiece);
-    }
-
-    // TODO: write engine then fix gui later?
     public void move(String source, String dest) {
         // move("d3", "d4") will see piece
         int srcFile = codeToFile(source);
         int srcRank = codeToRank(source);
-//        System.out.println("srcfile: "+srcFile);
-        // flipped
-//        System.out.println("srcrank: "+srcRank);
-
-        // check legal here
 
         // indices always rank, file
         // illegal move if no piece on source
@@ -86,11 +99,6 @@ public class Board {
             return;
         }
 
-        System.out.println("source:"+source);
-        System.out.println("dest:"+dest);
-        System.out.println("moving piece: "+movingPiece);
-        System.out.println("PICE MOVEING: "+movingPiece.isWhite());
-
         if (movingPiece.isLegalMove(source, dest, this)) {
             squares[srcRank-1][srcFile-1].setCurrentPiece(null);
 
@@ -98,22 +106,26 @@ public class Board {
             // flipped
             int destRank = codeToRank(dest);
             // piece moves to opposite side visually, array correct
-
-            System.out.println("dest rank at move: "+destRank);
-            System.out.println("dest file at move: "+destFile);
+            whiteToMove = !whiteToMove;
             squares[destRank-1][destFile-1].setCurrentPiece(movingPiece);
             // e2 e4: squares[3][4]
+
+            moveHistory.add(new Move(source, dest));
             moveNumber++;
         } else {
             System.out.println("Illegal Move! Other Reason");
         }
     }
 
-    private int codeToFile(String code) {
+    public ArrayList<Move> getMoveHistory() {
+        return moveHistory;
+    }
+
+    public int codeToFile(String code) {
         return (int) code.charAt(0) - 96;
     }
 
-    private int codeToRank(String code) {
+    public int codeToRank(String code) {
         int rank = (int) code.charAt(1) - 48;
         // flip rank index ex: 4 to 4 or 2 to 6
         // why not flipped on rook?
@@ -133,13 +145,40 @@ public class Board {
         return sb.toString();
     }
 
+    public ArrayList<Square> findPieces(Piece p, boolean isWhite) {
+        ArrayList<Square> squares = new ArrayList<>();
+        for (int i = 1; i <= 8; i++) {
+            for (int j = 1; j <= 8; j++) {
+                Piece cur = getSquare(i,j).getCurrentPiece();
+                if (cur != null) {
+
+                }
+            }
+        }
+
+        return squares;
+    }
+
+    public boolean inCheck() {
+        if (whiteToMove){
+            // white in check if black has any legal moves with dest as whites king
+            ArrayList<Move> m = Engine.getAllPossibleMoves(this, false);
+            // find white's king
+        } else {
+            // black in check if white has any legal moves with dest as blacks king
+            // find black's king
+        }
+
+        return false;
+    }
+
     public int getMoveNumber() {
         return moveNumber;
     }
 
     // if input "e2", output is "e3" and "e4"
-    public ArrayList<String> getLegalMoves(String srcSquare) {
-        ArrayList<String> possibleMoves = new ArrayList<>();
+    public ArrayList<Move> getLegalMoves(String srcSquare) {
+        ArrayList<Move> possibleMoves = new ArrayList<>();
         // for one pawn, look at legal moves (pawn on e2)
         // for each square, check if legal?? then evaluate
         // check movement patterns to avoid checking every square
@@ -154,20 +193,14 @@ public class Board {
                 algNot.append(j+1);
                 // null sometimes
                 if (getSquare(srcSquare).getCurrentPiece() == null) {
-                    System.out.println("NO PIECE ON SQUARE");
                     return possibleMoves;
                 }
                 if (srcSquare.equals(algNot.toString())) continue;
 
                 if (getSquare(srcSquare).getCurrentPiece().isLegalMove(srcSquare, algNot.toString(), this)) {
-                    possibleMoves.add(algNot.toString());
+                    possibleMoves.add(new Move(srcSquare, algNot.toString()));
                 }
             }
-        }
-
-        System.out.println("possible moves: "+possibleMoves.size());
-        for (String s : possibleMoves) {
-            System.out.println(s);
         }
 
         return possibleMoves;
@@ -183,6 +216,21 @@ public class Board {
     // ex: 3, 4 means "c4"
     public Square getSquare(int file, int rank) {
         return squares[rank-1][file-1];
+    }
+
+    @Override
+    public int hashCode() {
+        // unique id for board position: sum(posweight*rank*file)
+        int code = 0;
+        for (int i = 1; i <= 8; i++) {
+            for (int j = 1; j <= 8; j++) {
+                Piece p = getSquare(i,j).getCurrentPiece();
+                if (p != null) {
+                    code += (p.getValue()*i*j);
+                }
+            }
+        }
+        return code;
     }
 
     @Override

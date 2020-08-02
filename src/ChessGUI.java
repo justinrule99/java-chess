@@ -1,30 +1,34 @@
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
-public class ChessGUI extends JPanel implements MouseListener {
+public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 
     private Board board;
     private Image image;
     private Square squareSelected;
-    private ArrayList<String> legalMoves;
+    private ArrayList<Move> legalMoves;
 
     public ChessGUI(Board board) {
         super();
         this.board = board;
-        //            image = ImageIO.read(new File("images/Chess_bdt60.png"));
+        // might not be updated always (would autowire?)
         legalMoves = new ArrayList<>();
-        board = new Board();
         addMouseListener(this);
-
-
+        addKeyListener(this);
     }
 
-    // since array starts a1 at upper left, gui always shows white on top
-
+    // adds focus to JFrame so KeyListener works
+    public void addNotify() {
+        super.addNotify();
+        requestFocus();
+    }
 
     @Override
     public void paintComponent(Graphics g){
@@ -44,16 +48,23 @@ public class ChessGUI extends JPanel implements MouseListener {
         }
 
         // draw image at correct spot (change with each move)
-        // fill images sqaures with images (will updated according to game object on change)
-        // board object already has locations, transfer to images
+        // how to flip everything?
         // i = file, j = rank
         for (int i = 1; i <= 8; i++) {
             for (int j = 1; j <= 8; j++) {
                 Piece currentPiece = board.getSquare(i,j).getCurrentPiece();
                 if (currentPiece == null) continue;
                 image = new ImageIcon(currentPiece.getImageName()).getImage();
-                g.drawImage(image, (100*i)-100, (100*j)-100, this);
+                // 9-i to flip natural rendering over y axis
+                g.drawImage(image, (100*(i))-100, (100*(9-j))-100, this);
             }
+        }
+
+        // change legalmoves
+        g.setColor(new Color(2,20,200));
+        for (Move m : legalMoves) {
+            // rank*100, file*100, 100,100
+            g.fillRect((100*board.codeToFile(m.getDest()))-60,840-(100*board.codeToRank(m.getDest())),20,20);
         }
     }
 
@@ -67,58 +78,49 @@ public class ChessGUI extends JPanel implements MouseListener {
         frame.setBackground(new Color(51,204,51));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
-
     }
 
 
-    // can't move same piece twice in a row?
     // doesn't properly update board object?
     @Override
     public void mouseClicked(MouseEvent e) {
         int file = (e.getX() / 100)+1;
-        int rank = ((e.getY() / 100)+1);
+        int rank = 9-((e.getY() / 100)+1);
 
+        // acts as dest
         String code = board.fileAndRankToCode(rank, file);
-        // everything currently flipped
 
-        if (legalMoves.contains(code)) {
-            // convert a square object to an alg code?
-            // src code is e7 instead of e2 ??
-            System.out.println("SRC CODE:  "+squareSelected);
-            System.out.println("DEST CODE: "+code);
-            // might not be changing actual board object
-            board.move(squareSelected.toString(), code);
-            // check if piece on e4 now
-            // visually rank flipped
-            // numbers flipped on algsquare (either process or algsquare -> arr)
-            Piece afterMove = board.getSquare("e4").getCurrentPiece();
-            if (afterMove == null) {
-                System.out.println("NOT PIECE AFTER MOVE on e4");
-            } else System.out.println("paice her");
+        // will move
+        if (squareSelected != null) {
+            if (legalMoves.contains(new Move(squareSelected.toString(), code))) {
+                // might not be changing actual board object
+                board.move(squareSelected.toString(), code);
 
-            legalMoves.clear();
-            squareSelected = null;
-            this.repaint();
-            return;
+                Move opponentBest = Engine.getBestMove(board, 3, false);
+                board.move(opponentBest.getSrc(), opponentBest.getDest());
+
+                // later: create new boards and run simulations more moves into future
+
+                legalMoves.clear();
+                squareSelected = null;
+                this.repaint();
+                return;
+            }
         }
 
-        System.out.println("FILE: "+file);
-        System.out.println("RANK:"+rank);
+
+        // clicking a piece to move on next click
         String algSquare = board.fileAndRankToCode(rank, file);
-        System.out.println("ALGSQUARE: "+algSquare);
         squareSelected = board.getSquare(algSquare);
-        // board does not update? chessgui using wrong board object
         Piece pieceAtClick = board.getSquare(algSquare).getCurrentPiece();
+
         if (pieceAtClick != null) {
-            System.out.println("piece clicked on:"+pieceAtClick);
-            // ISWHITE IS WRONG FOR EVERYTHING
-            System.out.println("iswhite: "+pieceAtClick.isWhite());
-            // paint sqaures of possible moves
-            // file and rank are backwards??
             legalMoves = board.getLegalMoves(algSquare);
-            // set state: current piece highlighted, listening for legal move, then execute
+            this.repaint();
         } else {
             System.out.println("No piece here.. (from gui top level)");
+            legalMoves.clear();
+            squareSelected = null;
         }
     }
 
@@ -139,6 +141,28 @@ public class ChessGUI extends JPanel implements MouseListener {
 
     @Override
     public void mouseExited(MouseEvent e) {
+
+    }
+
+    @Override
+    public void keyTyped(KeyEvent keyEvent) {
+    }
+
+    private boolean whiteTurn = true;
+    @Override
+    public void keyPressed(KeyEvent keyEvent) {
+        Move best = Engine.getBestMove(board, 2, whiteTurn);
+        System.out.println("Best for "+whiteTurn+": "+best);
+        board.move(best.getSrc(), best.getDest());
+        this.repaint();
+        whiteTurn = !whiteTurn;
+
+
+
+    }
+
+    @Override
+    public void keyReleased(KeyEvent keyEvent) {
 
     }
 }

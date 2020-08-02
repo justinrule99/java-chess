@@ -21,10 +21,7 @@ public class RunEngine {
 
             moveSrc = sc.next();
             if (moveSrc.equals("exit")) break;
-            if (moveSrc.equals("l")) {
-                board.getLegalMoves("g1");
-                continue;
-            }
+
             board.getLegalMoves(moveSrc);
             // also get piece on src
             Piece srcPiece = board.getSquare(moveSrc).getCurrentPiece();
@@ -47,6 +44,7 @@ public class RunEngine {
             }
 
             System.out.println(board);
+            System.out.println(Engine.evaluate(board));
 
 
             // calculate

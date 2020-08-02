@@ -14,10 +14,14 @@ public abstract class Piece {
 
     // how to define movement behavior
 
-    public abstract boolean isLegalMove(String src, String dest, Board board);
+    public boolean isLegalMove(String src, String dest, Board board) {
+        // see if move resolves check (if in check)?
+
+        return false;
+    }
     public abstract String getImageName();
 
-    // assume legal now?
+    // deprecated
     public void movePiece(String destSquare) {
         currentSquare = destSquare;
     }

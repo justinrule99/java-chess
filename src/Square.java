@@ -4,8 +4,8 @@ public class Square {
     private boolean isWhite;
     // null if empty
     private Piece currentPiece;
-    private int rank;
-    private int file;
+    public final int rank;
+    public final int file;
 
     public Square(boolean isWhite, Piece currentPiece, int rank, int file) {
         // init square with color and starting piece
@@ -32,13 +32,13 @@ public class Square {
         this.currentPiece = currentPiece;
     }
 
+    public int getRank() {return rank;}
+    public int getFile() {return file;}
+
     @Override
     public String toString() {
         // alg notation from rank and file
-        StringBuilder sb = new StringBuilder();
-        sb.append((char) (file+96));
-        sb.append(rank);
 
-        return sb.toString();
+        return String.valueOf((char) (file + 96)) + rank;
     }
 }

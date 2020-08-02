@@ -31,13 +31,11 @@ public class Rook extends Piece {
                 // moving "left" from white
                 for (int i = srcFile-1; i >= destFile ; i--) {
                     Piece movingThrough = board.getSquare(i, srcRank).getCurrentPiece();
-                    // doesn't work
                     if (movingThrough != null) {
-                        System.out.println("moveing theoh a pic HORIZ: "+src+" thru "+dest);
                         if (movingThrough.isWhite() == sourcePiece.isWhite()) {
                             return false;
                         } else {
-                            // opp colors: handle capture: should only happen on dest?
+                            return i == destFile;
                         }
                     }
                 }
@@ -46,16 +44,15 @@ public class Rook extends Piece {
                 for (int i = srcFile+1; i <= destFile ; i++) {
                     Piece movingThrough = board.getSquare(i, srcRank).getCurrentPiece();
                     if (movingThrough != null) {
-                        System.out.println("moveing theoh a pic HORIZ: "+src+" thru "+dest);
+//                        System.out.println("moveing theoh a pic HORIZ: "+src+" thru "+dest);
                         if (movingThrough.isWhite() == sourcePiece.isWhite()) {
                             return false;
                         } else {
-                            // opp colors: handle capture: should only happen on dest?
+                            return i == destFile;
                         }
                     }
                 }
             }
-
 
             return true;
 
@@ -65,41 +62,40 @@ public class Rook extends Piece {
                 // going "down"
                 for (int i = srcRank-1; i >= destRank; i--) {
                     Piece movingThrough = board.getSquare(srcFile, i).getCurrentPiece();
-                    System.out.println("moveing theoh a pic: "+src+" thru "+dest+", TYPE: "+movingThrough);
+//                    System.out.println("moveing theoh a pic: "+src+" thru "+dest+", TYPE: "+movingThrough);
 
                     if (movingThrough != null) {
                         if (movingThrough.isWhite() == sourcePiece.isWhite()) {
                             return false;
                         } else {
-                            // opp colors: handle capture: should only happen on dest?
-                            System.out.println("(down) no piece on file "+ srcFile+" rank "+i);
-
+                            return i == destRank;
                         }
                     }
                 }
             } else {
                 // going "up"
-                for (int i = srcRank+1; i < destRank; i++) {
+                for (int i = srcRank+1; i <= destRank; i++) {
                     Piece movingThrough = board.getSquare(srcFile, i).getCurrentPiece();
                     if (movingThrough != null) {
                         if (movingThrough.isWhite() == sourcePiece.isWhite()) {
                             return false;
                         } else {
-                            // opp colors: handle capture: should only happen on dest?
-                            System.out.println("no piece on file "+ srcFile+" rank "+i);
+                            return i == destRank;
                         }
                     }
 
                 }
             }
 
-            // if moving backwards: not correct
-            // need to decrement if going backwards
+            // cannot move INTO check
+            // simulate move
+//            Board afterMove = new Board(board);
+//            afterMove.move(src, dest);
+//            if (afterMove.inCheck()) return false;
 
             // gone through entire move, no problems
             return true;
         }
-
 
         return false;
     }

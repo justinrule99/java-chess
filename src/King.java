@@ -2,7 +2,7 @@ public class King extends Piece{
 
     public King(boolean isWhite) {
         super(isWhite);
-        setValue(90);
+        setValue(0);
     }
 
     @Override
@@ -14,7 +14,27 @@ public class King extends Piece{
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
-        // moves one square in any direction, cannot move into checks
+        // moves one square in any direction (except castles), cannot move into checks
+        // if in check, must resolve!
+
+        // abs diff rank && abs diff file <= 1
+        int srcRank = (int) src.charAt(1) - 48;
+        int destRank = (int) dest.charAt(1) - 48;
+
+        int srcFile = (int) src.charAt(0) - 96;
+        int destFile = (int) dest.charAt(0) - 96;
+
+        if (Math.abs(srcRank-destRank) <= 1 && Math.abs(srcFile-destFile) <= 1) {
+
+            // check collisions, checks, etc
+            // if dest has piece same color, invalid
+            Piece destPiece = board.getSquare(dest).getCurrentPiece();
+            if (destPiece != null && destPiece.isWhite() == isWhite()) return false;
+
+            // after each move: check if in check
+
+            return true;
+        }
 
 
         return false;

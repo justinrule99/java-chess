@@ -33,4 +33,11 @@ public class Move {
     public String toString() {
         return src + " "+ dest;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Move)) return false;
+        Move compare = (Move) obj;
+        return this.src.equals(compare.src) && this.dest.equals(compare.dest);
+    }
 }
