@@ -1,31 +1,19 @@
-import com.sun.security.jgss.GSSUtil;
-
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.Stack;
 
 public class Board {
     // represents a standard chess board
 
     public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_BLACK = "\u001B[30m";
-    public static final String ANSI_RED = "\u001B[31m";
     public static final String ANSI_GREEN = "\u001B[32m";
-    public static final String ANSI_YELLOW = "\u001B[33m";
-    public static final String ANSI_BLUE = "\u001B[34m";
-    public static final String ANSI_PURPLE = "\u001B[35m";
-    public static final String ANSI_CYAN = "\u001B[36m";
     public static final String ANSI_WHITE = "\u001B[37m";
 
     // 2d array of squares: will have piece info
-    // need move history in stack
     private Square[][] squares;
     private int moveNumber;
     private boolean whiteToMove;
+    private King whiteKing = new King(true);
+    private King blackKing = new King(false);
     private ArrayList<Move> moveHistory;
-
-    //TODO: ctor to create new board based on given position
 
     public Board(Board b) {
         // shallow copy
@@ -43,14 +31,18 @@ public class Board {
         this.moveHistory.addAll(b.moveHistory);
         moveNumber = b.moveNumber;
         whiteToMove = b.whiteToMove;
+
+        whiteKing = new King(b.whiteKing.isWhite());
+        whiteKing.setCurrentSquare(b.whiteKing.getCurrentSquare());
+
+        blackKing = new King(b.blackKing.isWhite());
+        whiteKing.setCurrentSquare(b.blackKing.getCurrentSquare());
     }
 
     // initialize the game with pieces on starting squares
     public Board() {
         // squares [ranks][files]
         squares = new Square[8][8];
-        // will need to flip board later
-        // now: i = 7 is rank 1, i = 1 is rank 7
         // SQUARE, NOT PIECE
         boolean isWhite = true;
         moveNumber = 0;
@@ -75,7 +67,15 @@ public class Board {
                     } else if (j == 3) {
                         squares[i][j] = new Square(isWhite, new Queen(i == 0), i,j);
                     } else {
-                        squares[i][j] = new Square(isWhite, new King(i == 0), i,j);
+                        if (i == 0) {
+                            Square e1 = new Square(isWhite, whiteKing , i,j);
+                            squares[i][j] = e1;
+                            whiteKing.setCurrentSquare(e1);
+                        } else {
+                            Square e8 = new Square(isWhite, blackKing , i,j);
+                            squares[i][j] = e8;
+                            blackKing.setCurrentSquare(e8);
+                        }
                     }
                 } else {
                     squares[i][j] = new Square(isWhite, null, i,j);
@@ -84,6 +84,21 @@ public class Board {
             }
             isWhite = !isWhite;
         }
+
+        // set current square on pieces
+        for (int i = 1; i <= 8; i++) {
+            for (int j = 1; j <= 8 ; j++) {
+                Square curSquare = getSquare(i,j);
+                Piece cur = curSquare.getCurrentPiece();
+                if (cur != null) {
+                    cur.setCurrentSquare(curSquare);
+                }
+            }
+        }
+    }
+
+    public void move(Move m) {
+        move(m.getSrc(), m.getDest());
     }
 
     public void move(String source, String dest) {
@@ -100,15 +115,22 @@ public class Board {
         }
 
         if (movingPiece.isLegalMove(source, dest, this)) {
+//            if (inCheck()) {
+//                System.out.println("CURRENTLY IN CHECK! NEED TO RESOLVE");
+//                return;
+//            }
+
             squares[srcRank-1][srcFile-1].setCurrentPiece(null);
 
             int destFile = codeToFile(dest);
-            // flipped
             int destRank = codeToRank(dest);
-            // piece moves to opposite side visually, array correct
             whiteToMove = !whiteToMove;
             squares[destRank-1][destFile-1].setCurrentPiece(movingPiece);
+            // change currentSquare on movingPiece
+            movingPiece.setCurrentSquare(getSquare(dest));
             // e2 e4: squares[3][4]
+
+            // handle pawn promotion here (auto queen)
 
             moveHistory.add(new Move(source, dest));
             moveNumber++;
@@ -126,57 +148,47 @@ public class Board {
     }
 
     public int codeToRank(String code) {
-        int rank = (int) code.charAt(1) - 48;
         // flip rank index ex: 4 to 4 or 2 to 6
         // why not flipped on rook?
         // don't do 9-rank
-        return rank;
+        return (int) code.charAt(1) - 48;
     }
     // 3, 4 to "d3"
-    public String fileAndRankToCode(int rank, int file) {
-        StringBuilder sb = new StringBuilder();
+    public String rankAndFileToCode(int rank, int file) {
         // convert 8 to 'h'
         // 1 to 'a'
-
-        sb.append((char) (file+96));
-        sb.append(rank);
-
-
-        return sb.toString();
+        return String.valueOf((char) (file + 96)) + rank;
     }
 
-    public ArrayList<Square> findPieces(Piece p, boolean isWhite) {
-        ArrayList<Square> squares = new ArrayList<>();
-        for (int i = 1; i <= 8; i++) {
-            for (int j = 1; j <= 8; j++) {
-                Piece cur = getSquare(i,j).getCurrentPiece();
-                if (cur != null) {
-
-                }
-            }
-        }
-
-        return squares;
-    }
-
+    // need to know where kings are at all times
     public boolean inCheck() {
-        if (whiteToMove){
-            // white in check if black has any legal moves with dest as whites king
-            ArrayList<Move> m = Engine.getAllPossibleMoves(this, false);
-            // find white's king
-        } else {
-            // black in check if white has any legal moves with dest as blacks king
-            // find black's king
+
+        // whites turn: if black has a legal move against white's king, white is in check and needs to resolve it
+
+        // stack overflow sometimes?? y tho
+        Square kingSquare = whiteToMove ? whiteKing.getCurrentSquare() : blackKing.getCurrentSquare();
+        if (kingSquare == null) {
+            System.out.println("KS NULL: Exiting");
+            return false;
+        }
+        ArrayList<Move> moves = Engine.getAllPossibleMoves(this, !whiteToMove);
+        for (Move m : moves) {
+            if (m.getDest().equals(kingSquare.toString())) {
+                System.out.println("CHECK");
+                return true;
+            }
         }
 
         return false;
     }
+
 
     public int getMoveNumber() {
         return moveNumber;
     }
 
     // if input "e2", output is "e3" and "e4"
+    // runs every time engine processes a node
     public ArrayList<Move> getLegalMoves(String srcSquare) {
         ArrayList<Move> possibleMoves = new ArrayList<>();
         // for one pawn, look at legal moves (pawn on e2)

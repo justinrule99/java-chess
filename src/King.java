@@ -14,6 +14,7 @@ public class King extends Piece{
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
+
         // moves one square in any direction (except castles), cannot move into checks
         // if in check, must resolve!
 
@@ -33,6 +34,7 @@ public class King extends Piece{
 
             // after each move: check if in check
 
+//            if (board.inCheck()) return false;
             return true;
         }
 

@@ -4,7 +4,7 @@
 public abstract class Piece {
 
     // null if captured
-    protected String currentSquare;
+    protected Square currentSquare;
     protected boolean white;
     protected int value;
 
@@ -17,21 +17,16 @@ public abstract class Piece {
     public boolean isLegalMove(String src, String dest, Board board) {
         // see if move resolves check (if in check)?
 
-        return false;
+        // do move on new board, check if in check (cannot move into check)
+        return true;
     }
     public abstract String getImageName();
 
-    // deprecated
-    public void movePiece(String destSquare) {
-        currentSquare = destSquare;
-    }
-
-
-    public String getCurrentSquare() {
+    public Square getCurrentSquare() {
         return currentSquare;
     }
 
-    public void setCurrentSquare(String currentSquare) {
+    public void setCurrentSquare(Square currentSquare) {
         this.currentSquare = currentSquare;
     }
 

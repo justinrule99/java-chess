@@ -14,6 +14,7 @@ public class Pawn extends Piece {
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
+
 //        int srcRank = (int) src.charAt(1);
         int srcRank = (int) src.charAt(1) - 48;
         int destRank = (int) dest.charAt(1) - 48;

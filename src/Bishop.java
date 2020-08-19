@@ -12,7 +12,10 @@ public class Bishop extends Piece{
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
+
         // moves diagonally, forwards and backwards. always stays on the same colored square
+
+        // make new board, do move, check if in check?
 
         // check diag, then collisions, then captures
         Piece srcPiece = board.getSquare(src).getCurrentPiece();
@@ -37,7 +40,7 @@ public class Bishop extends Piece{
                     // false if collision
                     Piece movingThrough = board.getSquare(srcFile-i-1, srcRank-i-1).getCurrentPiece();
                     if (movingThrough != null) {
-//                        System.out.println("--Collision! at "+board.fileAndRankToCode(srcRank-i-1, srcFile-i-1));
+//                        System.out.println("--Collision! at "+board.rankAndFiletoCode(srcRank-i-1, srcFile-i-1));
                         return false;
                     }
                 }
@@ -54,7 +57,7 @@ public class Bishop extends Piece{
                     // false if collision
                     Piece movingThrough = board.getSquare(srcFile+i+1, srcRank+i+1).getCurrentPiece();
                     if (movingThrough != null) {
-//                        System.out.println("++Collision! at "+board.fileAndRankToCode(srcRank+i+1, srcFile+i+1)+" with piece "+movingThrough);
+//                        System.out.println("++Collision! at "+board.rankAndFiletoCode(srcRank+i+1, srcFile+i+1)+" with piece "+movingThrough);
                         return false;
                     }
                 }
@@ -71,7 +74,7 @@ public class Bishop extends Piece{
                     // false if collision
                     Piece movingThrough = board.getSquare(srcFile+i+1, srcRank-i-1).getCurrentPiece();
                     if (movingThrough != null) {
-//                        System.out.println("r-f+Collision! at "+board.fileAndRankToCode(srcRank-i-1, srcFile+i+1));
+//                        System.out.println("r-f+Collision! at "+board.rankAndFiletoCode(srcRank-i-1, srcFile+i+1));
                         return false;
                     }
                 }
@@ -89,7 +92,7 @@ public class Bishop extends Piece{
                 for (int i = 0; i < destRank-srcRank-1; i++) {
                     Piece movingThrough = board.getSquare(srcFile-i-1, srcRank+i+1).getCurrentPiece();
                     if (movingThrough != null) {
-//                        System.out.println("r+f-Collision! at "+board.fileAndRankToCode(srcRank+i+1, srcFile-i-1));
+//                        System.out.println("r+f-Collision! at "+board.rankAndFiletoCode(srcRank+i+1, srcFile-i-1));
                         return false;
                     }
                 }
@@ -101,6 +104,8 @@ public class Bishop extends Piece{
                 return true;
             }
         }
+
+
 
         return false;
     }

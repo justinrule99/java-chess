@@ -12,9 +12,9 @@ public class Engine {
 
     public static int numNodesProcessed = 0;
 
-    // need some RNG if moves within ~.2 of max
+    // sometimes doesn't play a move?
     public static Move getBestMove(Board board, int depth, boolean isWhiteTurn) {
-        double eval = 0.0;
+        double eval;
         ArrayList<Move> pickableMoves = new ArrayList<>();
         double maxEval = isWhiteTurn ? -100000 : 100000;
         Move bestMove = null;
@@ -57,7 +57,6 @@ public class Engine {
                 System.out.println("Analyzed "+numNodesProcessed+" positions..");
 
             }
-            ArrayList<Move> history = board.getMoveHistory();
             // always only one move
             return evaluate(board);
         }
@@ -107,7 +106,7 @@ public class Engine {
                 curPiece = board.getSquare(i,j).getCurrentPiece();
 
                 if (curPiece != null && curPiece.isWhite() == whiteTurn) {
-                    moves.addAll(board.getLegalMoves(board.fileAndRankToCode(j,i)));
+                    moves.addAll(board.getLegalMoves(board.rankAndFileToCode(j,i)));
                 }
             }
         }
@@ -116,50 +115,46 @@ public class Engine {
     }
 
     public static double evaluate(Board board) {
-        // should just have an array of pieces with self contained position
-        // evaluates this board position
+        // should just have an array of pieces with self contained position (faster)
+        // we can make this WAY faster with each piece's location (not reliant on board)
         double eval = 0.0;
-        int whitePiecesValue = 0;
-        int blackPiecesValue = 0;
+
+        /*
+            TODO: Break paths with no chances
+            TODO: Evaluate mobility (+.05 per move)
+            TODO: Improve board representation (for efficiency)
+            TODO: Encourage development
+            TODO: Detect doubled pawns (-.2)
+            TODO: Checkmate patterns
+            TODO: Theoretical openings (advanced)
+            TODO: Endgames
+         */
 
         // file, rank
         for (int i = 1; i <= 8; i++) {
             for (int j = 1; j <= 8; j++) {
                 Piece p = board.getSquare(i,j).getCurrentPiece();
                 if (p != null) {
+                    // only hits corners
+                    double middleIshBonus = ((i == 3 || i == 6) || (j == 3 || j == 6)) ? .6 : .0;
+                    double centerBonus = ((i == 4 || i == 5) && (j == 4 || j == 5)) ? 1 : .0;
+
                     if (p.isWhite()) {
-                        whitePiecesValue += p.getValue();
+                        eval += p.getValue();
+                        eval += centerBonus + middleIshBonus;
                     } else {
-                        blackPiecesValue += p.getValue();
+                        eval -= p.getValue();
+                        eval = eval - centerBonus - middleIshBonus;
                     }
                 }
             }
         }
 
-        eval = whitePiecesValue-blackPiecesValue;
 
         // eval central control, king safety, future attacks?
             // central control: pieces + attacks in center, c-f, 3-6
         // ++ for pieces in center not under attack
-
-        // file, rank
-        for (int i = 3; i <= 6; i++) {
-            for (int j = 3; j <= 6; j++) {
-                Piece p = board.getSquare(i,j).getCurrentPiece();
-                if (p != null) {
-                    double centerBonus = (i == 4 || i == 5 || j == 4 || j == 5) ? .8 : .5;
-                    if (p.isWhite()) {
-                        eval += centerBonus;
-                    } else {
-                        eval -= centerBonus;
-                    }
-                }
-            }
-        }
-        // how to do future attacks w/o simulation
-
-
-
+        // -- if own king in center and unprotected
 
 
         // pos: white, neg: black

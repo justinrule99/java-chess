@@ -94,6 +94,7 @@ public class Rook extends Piece {
 //            if (afterMove.inCheck()) return false;
 
             // gone through entire move, no problems
+//            if (board.inCheck()) return false;
             return true;
         }
 

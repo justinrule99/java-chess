@@ -1,4 +1,3 @@
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -6,9 +5,10 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
 public class ChessGUI extends JPanel implements MouseListener, KeyListener {
+
+    private final boolean SHOW_IMAGE_BACKGROUND = true;
 
     private Board board;
     private Image image;
@@ -47,8 +47,13 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
             }
         }
 
+        Image background = new ImageIcon("images/wooden_chessboard.png").getImage();
+        if (SHOW_IMAGE_BACKGROUND) {
+            g.drawImage(background, 0, 0, this);
+        }
+
+
         // draw image at correct spot (change with each move)
-        // how to flip everything?
         // i = file, j = rank
         for (int i = 1; i <= 8; i++) {
             for (int j = 1; j <= 8; j++) {
@@ -60,46 +65,46 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
             }
         }
 
-        // change legalmoves
-        g.setColor(new Color(2,20,200));
+        if (SHOW_IMAGE_BACKGROUND) {
+            g.setColor(Color.BLACK);
+        } else {
+            g.setColor(new Color(2,20,200));
+        }
         for (Move m : legalMoves) {
             // rank*100, file*100, 100,100
             g.fillRect((100*board.codeToFile(m.getDest()))-60,840-(100*board.codeToRank(m.getDest())),20,20);
         }
     }
 
-    // mouse listener: convert xy mouse event to alg notation, then show possible moves with that piece (if a piece)
-
     // GUI for the chess engine
     public static void main(String[] args) {
         JFrame frame = new JFrame();
         frame.setSize(800,830);
         frame.getContentPane().add(new ChessGUI(new Board()));
+
+
         frame.setBackground(new Color(51,204,51));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
 
 
-    // doesn't properly update board object?
     @Override
     public void mouseClicked(MouseEvent e) {
         int file = (e.getX() / 100)+1;
         int rank = 9-((e.getY() / 100)+1);
 
         // acts as dest
-        String code = board.fileAndRankToCode(rank, file);
+        String code = board.rankAndFileToCode(rank, file);
 
         // will move
         if (squareSelected != null) {
             if (legalMoves.contains(new Move(squareSelected.toString(), code))) {
-                // might not be changing actual board object
                 board.move(squareSelected.toString(), code);
 
                 Move opponentBest = Engine.getBestMove(board, 3, false);
                 board.move(opponentBest.getSrc(), opponentBest.getDest());
-
-                // later: create new boards and run simulations more moves into future
+                System.out.println(board.getMoveHistory());
 
                 legalMoves.clear();
                 squareSelected = null;
@@ -110,7 +115,7 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 
 
         // clicking a piece to move on next click
-        String algSquare = board.fileAndRankToCode(rank, file);
+        String algSquare = board.rankAndFileToCode(rank, file);
         squareSelected = board.getSquare(algSquare);
         Piece pieceAtClick = board.getSquare(algSquare).getCurrentPiece();
 
@@ -151,13 +156,14 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
     private boolean whiteTurn = true;
     @Override
     public void keyPressed(KeyEvent keyEvent) {
-        Move best = Engine.getBestMove(board, 2, whiteTurn);
-        System.out.println("Best for "+whiteTurn+": "+best);
+        // quit if key q
+        if (keyEvent.getKeyChar() == 'q') System.exit(0);
+
+
+        Move best = Engine.getBestMove(board, 3, whiteTurn);
         board.move(best.getSrc(), best.getDest());
         this.repaint();
         whiteTurn = !whiteTurn;
-
-
 
     }
 
