@@ -1,3 +1,4 @@
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /*
@@ -12,7 +13,9 @@ public class Engine {
 
     public static int numNodesProcessed = 0;
 
+
     // sometimes doesn't play a move?
+    // sometimes plays slightly worse move for rng
     public static Move getBestMove(Board board, int depth, boolean isWhiteTurn) {
         double eval;
         ArrayList<Move> pickableMoves = new ArrayList<>();
@@ -20,9 +23,31 @@ public class Engine {
         Move bestMove = null;
         // run minimax on all possible moves, execute best
         ArrayList<Move> allMoves = getAllPossibleMoves(board, isWhiteTurn);
+        ArrayList<Move> allCheckLegalMoves = new ArrayList<>(allMoves);
+        System.out.println("STARTING..");
+
         for (Move m : allMoves) {
             Board newB = new Board(board);
-            newB.move(m.getSrc(), m.getDest());
+            if (!newB.move(m)) {
+                System.out.println("REMOVED");
+                allCheckLegalMoves.remove(m);
+            }
+        }
+
+        System.out.println(allMoves.size());
+        System.out.println(allCheckLegalMoves.size());
+        if (allCheckLegalMoves.size() == 0) {
+            System.out.println("ERROR: NO LEGAL MOVES");
+
+        }
+
+        for (Move m : allCheckLegalMoves) {
+            // should call inCheck() here instead of in Board
+            Board newB = new Board(board);
+            newB.move(m);
+
+            // error if none in allCheckLegalMoves
+
             eval = Engine.minimax(newB, depth, !isWhiteTurn,-1000000, 1000000);
             if (isWhiteTurn) {
                 if (eval > maxEval) {
@@ -44,7 +69,8 @@ public class Engine {
         }
         // 50/50 chance of picking a pickableMove or bestMove
         Move randomGoodMove = pickableMoves.get((int)Math.floor(Math.random()*pickableMoves.size()));
-        return Math.random() > .2 ? bestMove : randomGoodMove;
+//        return bestMove;
+        return Math.random() > .3 ? bestMove : randomGoodMove;
     }
 
     // MINIMAX ALGORITHM
@@ -53,7 +79,7 @@ public class Engine {
         if (depth == 0) {
             // return heuristic value of board
             // how to return a move instead of an eval?
-            if (numNodesProcessed % 1000000 == 0) {
+            if (numNodesProcessed % 100000 == 0) {
                 System.out.println("Analyzed "+numNodesProcessed+" positions..");
 
             }
@@ -70,7 +96,7 @@ public class Engine {
             for (Move m : whiteMoves) {
                 numNodesProcessed++;
                 Board newBoard = new Board(board);
-                newBoard.move(m.getSrc(), m.getDest());
+                newBoard.move(m);
                 value = Math.max(value, minimax(newBoard, depth-1, false, alpha, beta));
                 alpha = Math.max(alpha, value);
                 if (beta <= alpha) break;
@@ -83,7 +109,7 @@ public class Engine {
             for (Move m : blackMoves) {
                 numNodesProcessed++;
                 Board newBoard = new Board(board);
-                newBoard.move(m.getSrc(), m.getDest());
+                newBoard.move(m);
                 // need to associate m with value
                 value = Math.min(value, minimax(newBoard, depth-1, true, alpha, beta));
                 beta = Math.min(beta, value);
@@ -95,6 +121,7 @@ public class Engine {
 
 
     // get legal moves for all pieces on the board
+    // optimize to use piece position, not entire board
     public static ArrayList<Move> getAllPossibleMoves(Board board, boolean whiteTurn) {
         ArrayList<Move> moves = new ArrayList<>();
         Piece curPiece;
@@ -114,7 +141,7 @@ public class Engine {
         return moves;
     }
 
-    public static double evaluate(Board board) {
+    public static double evaluate2(Board board) {
         // should just have an array of pieces with self contained position (faster)
         // we can make this WAY faster with each piece's location (not reliant on board)
         double eval = 0.0;
@@ -124,10 +151,12 @@ public class Engine {
             TODO: Evaluate mobility (+.05 per move)
             TODO: Improve board representation (for efficiency)
             TODO: Encourage development
+            TODO: Eval attacking chances
+            TODO: Eval King safety
             TODO: Detect doubled pawns (-.2)
             TODO: Checkmate patterns
             TODO: Theoretical openings (advanced)
-            TODO: Endgames
+            TODO: Endgame tables
          */
 
         // file, rank
@@ -161,4 +190,54 @@ public class Engine {
         return eval;
     }
 
+
+    // testing a second heuristic based on claude shannon's 1949 paper
+    // always evaluates in relation to white
+    public static double evaluate(Board board) {
+        double eval = 0.0;
+        int whQueen = 0;
+        int whRook = 0;
+        int whBishopKnight = 0;
+        int whPawn = 0;
+        // control of center, pos = advantage white
+        double centerFight = 0.0;
+
+        for (int i = 1; i <= 8; i++) {
+            for (int j = 1; j <= 8; j++) {
+                Piece p = board.getSquare(i,j).getCurrentPiece();
+                if (p != null) {
+                    int inc = p.isWhite() ? 1 : -1;
+                    // times weight?
+                    double centerInc = p.isWhite() ? .7 : -.6;
+                    // do based on type
+                    if (p.getValue() == 1) {
+                        whPawn += inc;
+                    } else if (p.getValue() == 3) {
+                        whBishopKnight += inc;
+                    } else if (p.getValue() == 5) {
+                        whRook += inc;
+                    } else if (p.getValue() == 9) {
+                        whQueen += inc;
+                    }
+
+                    int file = p.getCurrentSquare().getFile();
+                    int rank = p.getCurrentSquare().getRank();
+                    if (file >= 3 && file <= 6 && rank >= 3 && rank <= 6 ) {
+                        // need to reward 4 or 5 vs 3 or 6
+                        centerFight += centerInc;
+                    }
+                }
+            }
+        }
+
+        // calc mobility
+//        int whMobility = getAllPossibleMoves(board, true).size();
+//        int blMobility = getAllPossibleMoves(board, false).size();
+        int whMobility = 0;
+        int blMobility = 0;
+
+        eval = 9*whQueen + 5*whRook + 3*whBishopKnight + whPawn + .1*(whMobility-blMobility) + centerFight;
+
+        return eval;
+    }
 }

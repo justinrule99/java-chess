@@ -6,6 +6,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
+
 public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 
     private final boolean SHOW_IMAGE_BACKGROUND = true;
@@ -72,7 +73,7 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
         }
         for (Move m : legalMoves) {
             // rank*100, file*100, 100,100
-            g.fillRect((100*board.codeToFile(m.getDest()))-60,840-(100*board.codeToRank(m.getDest())),20,20);
+            g.fillRect((100*board.codeToFile(m.getDest()))-55,840-(100*board.codeToRank(m.getDest())),20,20);
         }
     }
 
@@ -88,7 +89,7 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
         frame.setVisible(true);
     }
 
-
+    // WTF I DIDNT CHANGE ANYTHING NOW IT DOESNT WORK !!
     @Override
     public void mouseClicked(MouseEvent e) {
         int file = (e.getX() / 100)+1;
@@ -96,14 +97,14 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 
         // acts as dest
         String code = board.rankAndFileToCode(rank, file);
+        System.out.println("square selected: "+squareSelected);
 
-        // will move
         if (squareSelected != null) {
             if (legalMoves.contains(new Move(squareSelected.toString(), code))) {
-                board.move(squareSelected.toString(), code);
+                board.move(new Move(squareSelected.toString(), code));
 
-                Move opponentBest = Engine.getBestMove(board, 3, false);
-                board.move(opponentBest.getSrc(), opponentBest.getDest());
+//                Move opponentBest = Engine.getBestMove(board, 3, false);
+//                board.move(opponentBest.getSrc(), opponentBest.getDest());
                 System.out.println(board.getMoveHistory());
 
                 legalMoves.clear();
@@ -113,10 +114,10 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
             }
         }
 
-
         // clicking a piece to move on next click
         String algSquare = board.rankAndFileToCode(rank, file);
         squareSelected = board.getSquare(algSquare);
+
         Piece pieceAtClick = board.getSquare(algSquare).getCurrentPiece();
 
         if (pieceAtClick != null) {
@@ -128,6 +129,7 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
             squareSelected = null;
         }
     }
+
 
     @Override
     public void mousePressed(MouseEvent e) {
@@ -151,6 +153,8 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 
     @Override
     public void keyTyped(KeyEvent keyEvent) {
+
+
     }
 
     private boolean whiteTurn = true;
@@ -159,11 +163,38 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
         // quit if key q
         if (keyEvent.getKeyChar() == 'q') System.exit(0);
 
+        // IN ENGINE: white king moves to g4??
+        if (keyEvent.getKeyChar() == 'c') {
+            System.out.println("Check status:");
+            System.out.println(board.inCheck());
 
-        Move best = Engine.getBestMove(board, 3, whiteTurn);
-        board.move(best.getSrc(), best.getDest());
+            System.out.println(board.getMoveHistory());
+
+            System.out.println("white king direct: "+board.findKing(true));
+            System.out.println("black king direct: "+board.findKing(false));
+            return;
+        }
+
+        if (keyEvent.getKeyChar() == 'p') {
+            System.out.println(board);
+            System.out.println(Engine.evaluate(board));
+            System.out.println(Engine.evaluate2(board));
+            return;
+        }
+
+        if (keyEvent.getKeyChar() == 'b') {
+            System.out.println(Engine.getBestMove(board, 2, whiteTurn));
+            return;
+        }
+
+
+        Move best = Engine.getBestMove(board, 2, whiteTurn);
+        board.move(best);
         this.repaint();
         whiteTurn = !whiteTurn;
+
+        System.out.println("white king direct: "+board.findKing(true));
+        System.out.println("black king direct: "+board.findKing(false));
 
     }
 

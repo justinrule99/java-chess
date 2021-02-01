@@ -29,6 +29,18 @@ public class Move {
         this.dest = dest;
     }
 
+    public String toAlgebraic(Board board) {
+        // get
+        Piece piece = board.getSquare(src).getCurrentPiece();
+        System.out.println(src);
+        System.out.println(dest);
+        if (piece instanceof Pawn) {
+            return dest;
+        }
+
+        return piece + dest;
+    }
+
     @Override
     public String toString() {
         return src + " "+ dest;

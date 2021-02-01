@@ -12,6 +12,8 @@ public class Rook extends Piece {
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
+        // inCheck needs to be nonreliant on getpossiblemoves (recursion)
+
         // rook must move straight line, unobstructed
         // srcrank == destrank OR srcfile == destfile no exceptions
         Piece sourcePiece = board.getSquare(src).getCurrentPiece();
@@ -95,6 +97,10 @@ public class Rook extends Piece {
 
             // gone through entire move, no problems
 //            if (board.inCheck()) return false;
+//            Board simAfter = new Board(board);
+//            simAfter.move(src, dest, false);
+//            if (simAfter.inCheck()) return false;
+
             return true;
         }
 

@@ -11,17 +11,35 @@ public class Board {
     private Square[][] squares;
     private int moveNumber;
     private boolean whiteToMove;
-    private King whiteKing = new King(true);
-    private King blackKing = new King(false);
+    // making shallow copies of king somewhere?
+    public King whiteKing = new King(true);
+    public King blackKing = new King(false);
     private ArrayList<Move> moveHistory;
 
+    public Board(Board b, boolean switchTurn) {
+        this(b);
+        if (switchTurn) {
+            whiteToMove = !b.whiteToMove;
+        }
+    }
+
     public Board(Board b) {
+        // implement a findKing(color) method for prev board
         // shallow copy
         squares = new Square[8][8];
 
+        // [rank][file]
+        // ranks bottom to top
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
-                Square s = new Square(b.squares[i][j].isWhite(), b.squares[i][j].getCurrentPiece(), b.squares[i][j].rank, b.squares[i][j].file);
+                // HACK: DECREMENET RANK AND FILE
+                // still wrong sometimes?
+                // this changes for everything, not just kings
+                if (b.squares[i][j].rank > 8 || b.squares[i][j].file > 8) {
+                    System.out.println("ERROR: rank or file was off");
+                }
+//                System.out.println(i+","+j+": "+b.squares[i][j]);
+                Square s = new Square(b.squares[i][j].isWhite(), b.squares[i][j].getCurrentPiece(), b.squares[i][j].rank-1, b.squares[i][j].file-1);
                 squares[i][j] = s;
             }
         }
@@ -32,11 +50,21 @@ public class Board {
         moveNumber = b.moveNumber;
         whiteToMove = b.whiteToMove;
 
+        // this is a shallow copy constructor?
+        // does this break all pieces or just king?
         whiteKing = new King(b.whiteKing.isWhite());
+//        System.out.println("whikiing square in copy: ");
         whiteKing.setCurrentSquare(b.whiteKing.getCurrentSquare());
 
+        // building off the previous, might not be current
+        whiteKing.setCurrentSquare(b.findKing(true));
+
+//        System.out.println(whiteKing.getCurrentSquare());
+
+
         blackKing = new King(b.blackKing.isWhite());
-        whiteKing.setCurrentSquare(b.blackKing.getCurrentSquare());
+//        blackKing.setCurrentSquare(b.blackKing.getCurrentSquare());
+        blackKing.setCurrentSquare(b.findKing(false));
     }
 
     // initialize the game with pieces on starting squares
@@ -67,15 +95,18 @@ public class Board {
                     } else if (j == 3) {
                         squares[i][j] = new Square(isWhite, new Queen(i == 0), i,j);
                     } else {
+                        Square e1 = new Square(isWhite, whiteKing , i,j);
+                        Square e8 = new Square(isWhite, blackKing , i,j);
+                        whiteKing.setCurrentSquare(e1);
+                        blackKing.setCurrentSquare(e8);
+
                         if (i == 0) {
-                            Square e1 = new Square(isWhite, whiteKing , i,j);
                             squares[i][j] = e1;
-                            whiteKing.setCurrentSquare(e1);
                         } else {
-                            Square e8 = new Square(isWhite, blackKing , i,j);
                             squares[i][j] = e8;
-                            blackKing.setCurrentSquare(e8);
                         }
+
+
                     }
                 } else {
                     squares[i][j] = new Square(isWhite, null, i,j);
@@ -97,28 +128,50 @@ public class Board {
         }
     }
 
-    public void move(Move m) {
-        move(m.getSrc(), m.getDest());
+    public boolean isWhiteToMove() {
+        return whiteToMove;
     }
 
-    public void move(String source, String dest) {
+    public boolean move(Move m) {
+        return move(m.getSrc(), m.getDest(), false);
+    }
+
+    // if in check, move must resolve check
+    // returns false if didn't move, true if did
+    public boolean move(String source, String dest, boolean skipChecks) {
         // move("d3", "d4") will see piece
+
+        // king movements cause problems in engine, fine for humans
+        // this blocks king movements for now
+//        if (source.equals("e1") || source.equals("e8")) {
+//            return;
+//        }
+
         int srcFile = codeToFile(source);
         int srcRank = codeToRank(source);
+
 
         // indices always rank, file
         // illegal move if no piece on source
         Piece movingPiece = squares[srcRank-1][srcFile-1].getCurrentPiece();
         if (movingPiece == null) {
             System.out.println("Illegal Move! No piece on first selected square");
-            return;
+            return false;
         }
 
+        // no check stuff right nowp
+
+        // should this be in move?
         if (movingPiece.isLegalMove(source, dest, this)) {
-//            if (inCheck()) {
-//                System.out.println("CURRENTLY IN CHECK! NEED TO RESOLVE");
-//                return;
-//            }
+            if (!skipChecks && inCheck()) {
+                Board testBoard = new Board(this, true);
+
+                testBoard.move(source, dest, true);
+//                 switch side?
+                if (testBoard.inCheck()) {
+                    return false;
+                }
+            }
 
             squares[srcRank-1][srcFile-1].setCurrentPiece(null);
 
@@ -126,7 +179,14 @@ public class Board {
             int destRank = codeToRank(dest);
             whiteToMove = !whiteToMove;
             squares[destRank-1][destFile-1].setCurrentPiece(movingPiece);
-            // change currentSquare on movingPiece
+            // need to ignore move
+            if (movingPiece instanceof King) {
+                if (movingPiece.isWhite()) {
+                    whiteKing.setCurrentSquare(getSquare(dest));
+                } else {
+                    blackKing.setCurrentSquare(getSquare(dest));
+                }
+            }
             movingPiece.setCurrentSquare(getSquare(dest));
             // e2 e4: squares[3][4]
 
@@ -136,7 +196,10 @@ public class Board {
             moveNumber++;
         } else {
             System.out.println("Illegal Move! Other Reason");
+            return false;
         }
+
+        return true;
     }
 
     public ArrayList<Move> getMoveHistory() {
@@ -160,21 +223,31 @@ public class Board {
         return String.valueOf((char) (file + 96)) + rank;
     }
 
-    // need to know where kings are at all times
+    // are YOU in check? if yes, ret true
+    // usage: if it's blacks turn to move, they must resolve their own check (if exists) while not moving into check
+    // this doesn't handle moving into check?
+    // error: doesnt move at all when in check
     public boolean inCheck() {
-
         // whites turn: if black has a legal move against white's king, white is in check and needs to resolve it
 
-        // stack overflow sometimes?? y tho
-        Square kingSquare = whiteToMove ? whiteKing.getCurrentSquare() : blackKing.getCurrentSquare();
+        Square kingSquare = findKing(whiteToMove);
+
+        // loop thru pieces?
+        // still sets
+        // have king
+
+
         if (kingSquare == null) {
             System.out.println("KS NULL: Exiting");
             return false;
         }
+
+        // all possible moves for hypothetical next turn (aka: under attack)
         ArrayList<Move> moves = Engine.getAllPossibleMoves(this, !whiteToMove);
+
         for (Move m : moves) {
             if (m.getDest().equals(kingSquare.toString())) {
-                System.out.println("CHECK");
+//                System.out.println("Check: "+kingSquare.toString());
                 return true;
             }
         }
@@ -192,18 +265,14 @@ public class Board {
     public ArrayList<Move> getLegalMoves(String srcSquare) {
         ArrayList<Move> possibleMoves = new ArrayList<>();
         // for one pawn, look at legal moves (pawn on e2)
-        // for each square, check if legal?? then evaluate
-        // check movement patterns to avoid checking every square
         for (int i = 0; i < 8; i++) { // file
             for (int j = 0; j < 8; j++) { // rank
                 // check if alg notation legal move
                 StringBuilder algNot = new StringBuilder();
                 // convert i to a-g, j to 1-8
                 algNot.append((char) (97+i));
-                // don't check move to yourself
 
                 algNot.append(j+1);
-                // null sometimes
                 if (getSquare(srcSquare).getCurrentPiece() == null) {
                     return possibleMoves;
                 }
@@ -221,13 +290,32 @@ public class Board {
     public Square getSquare(String algSquare) {
         int rank = codeToRank(algSquare);
         int file = codeToFile(algSquare);
-//        System.out.println("in getsquare, rnak is: "+rank);
         return squares[rank-1][file-1];
     }
 
     // ex: 3, 4 means "c4"
     public Square getSquare(int file, int rank) {
         return squares[rank-1][file-1];
+    }
+
+    // [rank][file]
+    // only gets black king on e8 here
+    public Square findKing(boolean white) {
+        for (int i = 7; i >= 0; i--) {
+            for (int j = 0; j < 8; j++) {
+                Piece curPiece = squares[i][j].getCurrentPiece();
+                if (curPiece == null) {
+                    continue;
+                }
+                if (curPiece.isKing) {
+//                    System.out.println("king color: "+curPiece.isWhite()+", "+squares[i][j]);
+                    if (white == curPiece.isWhite()) {
+                        return squares[i][j];
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -250,12 +338,26 @@ public class Board {
         // [rank][file]
         int rankNum = 8;
         StringBuilder boardString = new StringBuilder();
-        // goes backwards now for ranks??
         for (int i = 7; i >= 0; i--) {
             for (int j = 0; j < 8; j++) {
-                if (squares[i][j].getCurrentPiece() == null) {
+                Piece curPiece = squares[i][j].getCurrentPiece();
+                if (curPiece == null) {
                     boardString.append("_");
                 } else {
+//                    System.out.println("piece at "+squares[i][j].toString());
+
+                    if (curPiece.isKing) {
+                        System.out.println(i);
+                        System.out.println(j);
+                        // squares[7][4] (aka e8) prints as f9 (real bug or printing error??)
+                        System.out.println("IN PINRT WE HAVE KING AT "+squares[i][j].toString());
+                        if (curPiece.isWhite()) {
+                            whiteKing.setCurrentSquare(squares[i][j]);
+                        } else {
+                            blackKing.setCurrentSquare(squares[i][j]);
+                        }
+                    }
+
                     if (squares[i][j].getCurrentPiece().isWhite()) {
                         boardString.append(ANSI_WHITE);
                     } else {
@@ -275,6 +377,9 @@ public class Board {
             boardString.append(ch);
             boardString.append(" ");
         }
+
+        System.out.println(whiteKing.getCurrentSquare());
+        System.out.println(blackKing.getCurrentSquare());
         return boardString.toString();
     }
 }

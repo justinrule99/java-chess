@@ -2,7 +2,8 @@ public class King extends Piece{
 
     public King(boolean isWhite) {
         super(isWhite);
-        setValue(0);
+        this.isKing = true;
+        setValue(10);
     }
 
     @Override
@@ -32,9 +33,13 @@ public class King extends Piece{
             Piece destPiece = board.getSquare(dest).getCurrentPiece();
             if (destPiece != null && destPiece.isWhite() == isWhite()) return false;
 
-            // after each move: check if in check
+            // after each (simulated) move: check if in check
+            // if yes, false
+//            Board simAfter = new Board(board);
+//            simAfter.move(src, dest, true);
+//            if (simAfter.inCheck()) return false;
 
-//            if (board.inCheck()) return false;
+
             return true;
         }
 

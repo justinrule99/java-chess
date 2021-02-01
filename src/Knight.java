@@ -13,6 +13,7 @@ public class Knight extends Piece{
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
 
+
         // can jump. moves 2 squares one direction, one square perpendicular to first direction.
 
         int srcRank = (int) src.charAt(1) - 48;

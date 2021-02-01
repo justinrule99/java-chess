@@ -34,7 +34,7 @@ public class RunEngine {
             moveDest = sc.next();
 
 
-            board.move(moveSrc, moveDest);
+            board.move(moveSrc, moveDest, false);
             // null at moveDest (e4)
             Piece destPiece = board.getSquare(moveDest).getCurrentPiece();
             if (destPiece != null) {

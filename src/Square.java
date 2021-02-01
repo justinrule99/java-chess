@@ -35,10 +35,14 @@ public class Square {
     public int getRank() {return rank;}
     public int getFile() {return file;}
 
+
+    public String toStringComplex() {
+        // alg notation from rank and file
+        return currentPiece + ":" + (char) (file + 96) + rank;
+    }
+
     @Override
     public String toString() {
-        // alg notation from rank and file
-
         return String.valueOf((char) (file + 96)) + rank;
     }
 }

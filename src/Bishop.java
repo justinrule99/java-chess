@@ -13,6 +13,7 @@ public class Bishop extends Piece{
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
 
+
         // moves diagonally, forwards and backwards. always stays on the same colored square
 
         // make new board, do move, check if in check?
@@ -101,9 +102,11 @@ public class Bishop extends Piece{
                 if (destPiece != null) {
                     return destPiece.isWhite() != srcPiece.isWhite();
                 }
+
                 return true;
             }
         }
+
 
 
 
