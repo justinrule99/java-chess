@@ -30,7 +30,6 @@ public class Move {
     }
 
     public String toAlgebraic(Board board) {
-        // get
         Piece piece = board.getSquare(src).getCurrentPiece();
         System.out.println(src);
         System.out.println(dest);

@@ -13,36 +13,34 @@ public class ChessTesting {
 
         Board b = new Board();
 
-        Board newBoard = new Board(b);
-        System.out.println();
-        System.out.println();
-        System.out.println();
-
-        newBoard.move(Engine.getBestMove(newBoard, 1, true));
-
-
-        Board newBoard2 = new Board(newBoard);
-
 
         // need final board (where eval comes from)
         // if entire history: move is get(size-depth)
         // might not need moveHistory
 
-//        boolean whiteTurn = true;
+//        while (!b.whiteWins && !b.blackWins) {
+//            b.move(Engine.getBestMove(b,1,whiteTurn));
+//            System.out.println(b.getMoveHistory());
+//            whiteTurn = !whiteTurn;
+//        }
+
+        boolean whiteTurn = true;
 //        for (int i = 0; i < 30; i++) {
 //            // 10 move game
 //            b.move(Engine.getBestMove(b, 2, whiteTurn));
 //            whiteTurn = !whiteTurn;
 //        }
 
-//        b.move(new Move("e2", "e4"));
 
-
-//        Move best = Engine.getBestMove(b,4,b.isWhiteToMove());
-//        System.out.println("best move:"+best);
-//        System.out.println(Engine.evaluate(b));
-//        b.move(best);
-
+        int moveIdx = 1;
+        Move best = Engine.getBestMove(b,2,true);
+        while (best != null) {
+            b.move(best);
+            whiteTurn = !whiteTurn;
+            best = Engine.getBestMove(b,2,whiteTurn);
+            if (moveIdx % 10 == 0) System.out.println("Move "+moveIdx);
+            moveIdx++;
+        }
 
         System.out.println(b.getMoveHistory());
 

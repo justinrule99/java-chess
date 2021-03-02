@@ -11,10 +11,16 @@ public class Board {
     private Square[][] squares;
     private int moveNumber;
     private boolean whiteToMove;
+    public boolean whiteWins = false;
+    public boolean blackWins = false;
     // making shallow copies of king somewhere?
     public King whiteKing = new King(true);
     public King blackKing = new King(false);
     private ArrayList<Move> moveHistory;
+    public boolean whiteCanCastleQ = true;
+    public boolean whiteCanCastleK = true;
+    public boolean blackCanCastleQ = true;
+    public boolean blackCanCastleK = true;
 
     public Board(Board b, boolean switchTurn) {
         this(b);
@@ -49,22 +55,12 @@ public class Board {
         this.moveHistory.addAll(b.moveHistory);
         moveNumber = b.moveNumber;
         whiteToMove = b.whiteToMove;
-
-        // this is a shallow copy constructor?
-        // does this break all pieces or just king?
-        whiteKing = new King(b.whiteKing.isWhite());
-//        System.out.println("whikiing square in copy: ");
-        whiteKing.setCurrentSquare(b.whiteKing.getCurrentSquare());
-
-        // building off the previous, might not be current
-        whiteKing.setCurrentSquare(b.findKing(true));
-
-//        System.out.println(whiteKing.getCurrentSquare());
-
-
-        blackKing = new King(b.blackKing.isWhite());
-//        blackKing.setCurrentSquare(b.blackKing.getCurrentSquare());
-        blackKing.setCurrentSquare(b.findKing(false));
+        whiteWins = b.whiteWins;
+        blackWins = b.blackWins;
+        whiteCanCastleQ = b.whiteCanCastleQ;
+        whiteCanCastleK = b.whiteCanCastleK;
+        blackCanCastleQ = b.blackCanCastleQ;
+        blackCanCastleK = b.blackCanCastleK;
     }
 
     // initialize the game with pieces on starting squares
@@ -105,8 +101,6 @@ public class Board {
                         } else {
                             squares[i][j] = e8;
                         }
-
-
                     }
                 } else {
                     squares[i][j] = new Square(isWhite, null, i,j);
@@ -132,6 +126,34 @@ public class Board {
         return whiteToMove;
     }
 
+    public void handleCastle(boolean kingside) {
+        // have iswhite, move pieces here
+        // know legal move
+        int r = isWhiteToMove() ? 0 : 7;
+        if (isWhiteToMove()) {
+            whiteCanCastleQ = false;
+            whiteCanCastleK = false;
+        } else {
+            blackCanCastleK = false;
+            blackCanCastleQ = false;
+        }
+        Piece king = squares[r][4].getCurrentPiece();
+        Piece rook = squares[r][kingside ? 7 : 0].getCurrentPiece();
+
+        if (kingside) {
+            squares[r][4].setCurrentPiece(null);
+            squares[r][7].setCurrentPiece(null);
+            squares[r][6].setCurrentPiece(king);
+            squares[r][5].setCurrentPiece(rook);
+        } else {
+            squares[r][4].setCurrentPiece(null);
+            squares[r][0].setCurrentPiece(null);
+            squares[r][2].setCurrentPiece(king);
+            squares[r][3].setCurrentPiece(rook);
+        }
+
+    }
+
     public boolean move(Move m) {
         return move(m.getSrc(), m.getDest(), false);
     }
@@ -139,17 +161,11 @@ public class Board {
     // if in check, move must resolve check
     // returns false if didn't move, true if did
     public boolean move(String source, String dest, boolean skipChecks) {
-        // move("d3", "d4") will see piece
-
-        // king movements cause problems in engine, fine for humans
-        // this blocks king movements for now
-//        if (source.equals("e1") || source.equals("e8")) {
-//            return;
-//        }
-
         int srcFile = codeToFile(source);
         int srcRank = codeToRank(source);
-
+        int destFile = codeToFile(dest);
+        int destRank = codeToRank(dest);
+        // castling:
 
         // indices always rank, file
         // illegal move if no piece on source
@@ -159,36 +175,39 @@ public class Board {
             return false;
         }
 
-        // no check stuff right nowp
-
-        // should this be in move?
         if (movingPiece.isLegalMove(source, dest, this)) {
             if (!skipChecks && inCheck()) {
                 Board testBoard = new Board(this, true);
 
                 testBoard.move(source, dest, true);
-//                 switch side?
                 if (testBoard.inCheck()) {
                     return false;
                 }
             }
 
+            if (movingPiece instanceof King && Math.abs(srcFile-destFile) >= 2) {
+                handleCastle(destFile-srcFile == 2);
+                moveHistory.add(new Move(source, dest));
+                moveNumber++;
+                return true;
+                // might return from here if all moves handled
+            }
+
             squares[srcRank-1][srcFile-1].setCurrentPiece(null);
 
-            int destFile = codeToFile(dest);
-            int destRank = codeToRank(dest);
+
             whiteToMove = !whiteToMove;
             squares[destRank-1][destFile-1].setCurrentPiece(movingPiece);
             // need to ignore move
             if (movingPiece instanceof King) {
                 if (movingPiece.isWhite()) {
+
                     whiteKing.setCurrentSquare(getSquare(dest));
                 } else {
                     blackKing.setCurrentSquare(getSquare(dest));
                 }
             }
             movingPiece.setCurrentSquare(getSquare(dest));
-            // e2 e4: squares[3][4]
 
             // handle pawn promotion here (auto queen)
 
@@ -224,21 +243,11 @@ public class Board {
     }
 
     // are YOU in check? if yes, ret true
-    // usage: if it's blacks turn to move, they must resolve their own check (if exists) while not moving into check
-    // this doesn't handle moving into check?
-    // error: doesnt move at all when in check
+    // need to prevent moving into check
     public boolean inCheck() {
-        // whites turn: if black has a legal move against white's king, white is in check and needs to resolve it
 
         Square kingSquare = findKing(whiteToMove);
-
-        // loop thru pieces?
-        // still sets
-        // have king
-
-
         if (kingSquare == null) {
-            System.out.println("KS NULL: Exiting");
             return false;
         }
 
@@ -299,7 +308,6 @@ public class Board {
     }
 
     // [rank][file]
-    // only gets black king on e8 here
     public Square findKing(boolean white) {
         for (int i = 7; i >= 0; i--) {
             for (int j = 0; j < 8; j++) {
@@ -308,7 +316,6 @@ public class Board {
                     continue;
                 }
                 if (curPiece.isKing) {
-//                    System.out.println("king color: "+curPiece.isWhite()+", "+squares[i][j]);
                     if (white == curPiece.isWhite()) {
                         return squares[i][j];
                     }
@@ -344,13 +351,10 @@ public class Board {
                 if (curPiece == null) {
                     boardString.append("_");
                 } else {
-//                    System.out.println("piece at "+squares[i][j].toString());
 
                     if (curPiece.isKing) {
                         System.out.println(i);
                         System.out.println(j);
-                        // squares[7][4] (aka e8) prints as f9 (real bug or printing error??)
-                        System.out.println("IN PINRT WE HAVE KING AT "+squares[i][j].toString());
                         if (curPiece.isWhite()) {
                             whiteKing.setCurrentSquare(squares[i][j]);
                         } else {

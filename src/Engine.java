@@ -1,4 +1,3 @@
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /*
@@ -24,21 +23,28 @@ public class Engine {
         // run minimax on all possible moves, execute best
         ArrayList<Move> allMoves = getAllPossibleMoves(board, isWhiteTurn);
         ArrayList<Move> allCheckLegalMoves = new ArrayList<>(allMoves);
-        System.out.println("STARTING..");
 
         for (Move m : allMoves) {
             Board newB = new Board(board);
             if (!newB.move(m)) {
-                System.out.println("REMOVED");
                 allCheckLegalMoves.remove(m);
             }
         }
 
-        System.out.println(allMoves.size());
-        System.out.println(allCheckLegalMoves.size());
+        // This is checkmate
         if (allCheckLegalMoves.size() == 0) {
             System.out.println("ERROR: NO LEGAL MOVES");
+            if (depth == 1) {
+                if (isWhiteTurn) {
+                    board.blackWins = true;
+                } else {
+                    board.whiteWins = true;
+                }
+            } else {
+                return null;
+            }
 
+            // might find a checkmate in analysis but not actually be there
         }
 
         for (Move m : allCheckLegalMoves) {
@@ -141,7 +147,7 @@ public class Engine {
         return moves;
     }
 
-    public static double evaluate2(Board board) {
+    public static double evaluate(Board board) {
         // should just have an array of pieces with self contained position (faster)
         // we can make this WAY faster with each piece's location (not reliant on board)
         double eval = 0.0;
@@ -193,7 +199,7 @@ public class Engine {
 
     // testing a second heuristic based on claude shannon's 1949 paper
     // always evaluates in relation to white
-    public static double evaluate(Board board) {
+    public static double evaluate2(Board board) {
         double eval = 0.0;
         int whQueen = 0;
         int whRook = 0;

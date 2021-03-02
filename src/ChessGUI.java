@@ -4,7 +4,23 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Scanner;
+
+/* TODO
+    Castling
+    Pawn Promotion
+    Bugs: Moving INTO Check is allowed
+    Checkmate
+    ----
+    Analysis Board: Read games from a file and go thru by arrow keys
+    Opening Book
+    Checkmate Patterns
+    Improved Evaluation (faster)
+ */
+
 
 
 public class ChessGUI extends JPanel implements MouseListener, KeyListener {
@@ -15,6 +31,7 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
     private Image image;
     private Square squareSelected;
     private ArrayList<Move> legalMoves;
+    private boolean analysisMode = false;
 
     public ChessGUI(Board board) {
         super();
@@ -103,12 +120,17 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
             if (legalMoves.contains(new Move(squareSelected.toString(), code))) {
                 board.move(new Move(squareSelected.toString(), code));
 
-//                Move opponentBest = Engine.getBestMove(board, 3, false);
-//                board.move(opponentBest.getSrc(), opponentBest.getDest());
+//                Move opponentBest = Engine.getBestMove(board, 2, false);
+//                if (opponentBest == null) {
+//                    System.out.println("Checkmate: White Wins");
+//                }
+//                board.move(new Move(opponentBest.getSrc(), opponentBest.getDest()));
+
                 System.out.println(board.getMoveHistory());
 
                 legalMoves.clear();
                 squareSelected = null;
+                whiteTurn = !whiteTurn;
                 this.repaint();
                 return;
             }
@@ -158,12 +180,39 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
     }
 
     private boolean whiteTurn = true;
+    private String[] fileGame;
+    private int fileMoveIdx = 0;
+
     @Override
     public void keyPressed(KeyEvent keyEvent) {
         // quit if key q
         if (keyEvent.getKeyChar() == 'q') System.exit(0);
 
-        // IN ENGINE: white king moves to g4??
+        // goto analysis mode
+        if (keyEvent.getKeyChar() == 'a') {
+
+            board = new Board();
+            analysisMode = true;
+            try {
+                Scanner sc = new Scanner(new File("game.txt"));
+                fileGame = sc.nextLine().split(",");
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+
+            this.repaint();
+            return;
+        }
+
+        if (keyEvent.getKeyChar() == 'n' && analysisMode) {
+            // next move in sequence
+            board.move(new Move(fileGame[fileMoveIdx].substring(1,3), fileGame[fileMoveIdx++].substring(4,6)));
+            this.repaint();
+            return;
+        }
+
+
         if (keyEvent.getKeyChar() == 'c') {
             System.out.println("Check status:");
             System.out.println(board.inCheck());
@@ -192,9 +241,6 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
         board.move(best);
         this.repaint();
         whiteTurn = !whiteTurn;
-
-        System.out.println("white king direct: "+board.findKing(true));
-        System.out.println("black king direct: "+board.findKing(false));
 
     }
 

@@ -18,6 +18,7 @@ public class King extends Piece{
 
         // moves one square in any direction (except castles), cannot move into checks
         // if in check, must resolve!
+        // how to implement castles?
 
         // abs diff rank && abs diff file <= 1
         int srcRank = (int) src.charAt(1) - 48;
@@ -41,6 +42,33 @@ public class King extends Piece{
 
 
             return true;
+        }
+
+
+        // check collisions
+        if (srcRank == destRank && destFile - srcFile == 2) {
+            // castles
+            if (isWhite() && board.whiteCanCastleK) {
+                return board.getSquare("f1").getCurrentPiece() == null && board.getSquare("g1").getCurrentPiece() == null;
+            } else {
+                if (board.getSquare("f8").getCurrentPiece() == null && board.getSquare("g8").getCurrentPiece() == null) {
+                    return !isWhite() && board.blackCanCastleK;
+                }
+            }
+        }
+
+        // queenside
+        // check collisions
+        if (srcRank == destRank && srcFile - destFile == 2) {
+            if (isWhite() && board.whiteCanCastleQ) {
+                if (board.getSquare("d1").getCurrentPiece() == null && board.getSquare("c1").getCurrentPiece() == null && board.getSquare("b1").getCurrentPiece() == null) {
+                    return isWhite() && board.whiteCanCastleQ;
+                }
+            } else {
+                if (board.getSquare("d8").getCurrentPiece() == null && board.getSquare("c8").getCurrentPiece() == null && board.getSquare("b8").getCurrentPiece() == null) {
+                    return !isWhite() && board.blackCanCastleQ;
+                }
+            }
         }
 
 
