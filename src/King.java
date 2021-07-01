@@ -2,7 +2,6 @@ public class King extends Piece{
 
     public King(boolean isWhite) {
         super(isWhite);
-        this.isKing = true;
         setValue(10);
     }
 
@@ -15,9 +14,19 @@ public class King extends Piece{
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
-
-        // moves one square in any direction (except castles), cannot move into checks
+        isLegalMovesCalls++;
+        isLegalMoveKing++;
         // if in check, must resolve!
+        // DO NOT MOVE INTO CHECK: CHECK HERE
+        // accidentally recursive
+
+//        Board newBoard = new Board(board);
+//        newBoard.forceMove(src, dest);
+//        // check was the problem all along
+//        if (newBoard.inCheck(!board.isWhiteToMove())) {
+//            return false;
+//        }
+
         // how to implement castles?
 
         // abs diff rank && abs diff file <= 1
@@ -32,17 +41,9 @@ public class King extends Piece{
             // check collisions, checks, etc
             // if dest has piece same color, invalid
             Piece destPiece = board.getSquare(dest).getCurrentPiece();
-            if (destPiece != null && destPiece.isWhite() == isWhite()) return false;
-
-            // after each (simulated) move: check if in check
-            // if yes, false
-//            Board simAfter = new Board(board);
-//            simAfter.move(src, dest, true);
-//            if (simAfter.inCheck()) return false;
-
-
-            return true;
+            return destPiece == null || destPiece.isWhite() != isWhite();
         }
+
 
 
         // check collisions

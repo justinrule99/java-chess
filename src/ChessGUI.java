@@ -10,17 +10,14 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 /* TODO
-    Castling
-    Pawn Promotion
-    Bugs: Moving INTO Check is allowed
+    Bugs: Moving INTO Check might be allowed
     Checkmate
+    FEN Support
+    Speed
     ----
-    Analysis Board: Read games from a file and go thru by arrow keys
-    Opening Book
     Checkmate Patterns
-    Improved Evaluation (faster)
+    Faster Evaluation
  */
-
 
 
 public class ChessGUI extends JPanel implements MouseListener, KeyListener {
@@ -106,7 +103,6 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
         frame.setVisible(true);
     }
 
-    // WTF I DIDNT CHANGE ANYTHING NOW IT DOESNT WORK !!
     @Override
     public void mouseClicked(MouseEvent e) {
         int file = (e.getX() / 100)+1;
@@ -114,11 +110,11 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 
         // acts as dest
         String code = board.rankAndFileToCode(rank, file);
-        System.out.println("square selected: "+squareSelected);
 
         if (squareSelected != null) {
             if (legalMoves.contains(new Move(squareSelected.toString(), code))) {
                 board.move(new Move(squareSelected.toString(), code));
+
 
 //                Move opponentBest = Engine.getBestMove(board, 2, false);
 //                if (opponentBest == null) {
@@ -126,7 +122,7 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 //                }
 //                board.move(new Move(opponentBest.getSrc(), opponentBest.getDest()));
 
-                System.out.println(board.getMoveHistory());
+//                System.out.println(board.getMoveHistory());
 
                 legalMoves.clear();
                 squareSelected = null;
@@ -195,7 +191,7 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
             analysisMode = true;
             try {
                 Scanner sc = new Scanner(new File("game.txt"));
-                fileGame = sc.nextLine().split(",");
+                fileGame = sc.nextLine().split(" ");
 
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
@@ -207,20 +203,19 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
 
         if (keyEvent.getKeyChar() == 'n' && analysisMode) {
             // next move in sequence
-            board.move(new Move(fileGame[fileMoveIdx].substring(1,3), fileGame[fileMoveIdx++].substring(4,6)));
+//            System.out.println(fileGame[fileMoveIdx].substring(0,1));
+            board.move(new Move(fileGame[fileMoveIdx].substring(0,2), fileGame[fileMoveIdx++].substring(2,4)));
             this.repaint();
             return;
         }
 
 
         if (keyEvent.getKeyChar() == 'c') {
-            System.out.println("Check status:");
-            System.out.println(board.inCheck());
+            System.out.println("white turn: "+whiteTurn);
+            System.out.println("check turn: "+board.inCheck(false));
 
             System.out.println(board.getMoveHistory());
-
-            System.out.println("white king direct: "+board.findKing(true));
-            System.out.println("black king direct: "+board.findKing(false));
+            System.out.println(board.hashCode());
             return;
         }
 
@@ -241,7 +236,6 @@ public class ChessGUI extends JPanel implements MouseListener, KeyListener {
         board.move(best);
         this.repaint();
         whiteTurn = !whiteTurn;
-
     }
 
     @Override

@@ -1,6 +1,6 @@
 
 
-public class Move {
+public class Move implements Comparable<Move> {
 
     // src, dest, captures, etc
     // should keep up to date board
@@ -40,9 +40,28 @@ public class Move {
         return piece + dest;
     }
 
+    public String toStringUCI() {
+        return src+dest;
+    }
+
     @Override
     public String toString() {
         return src + " "+ dest;
+    }
+
+    @Override
+    public int compareTo(Move m) {
+        // compare based on src + dest
+        // if both 0: same.
+        int m1 = src.compareTo(m.getSrc());
+        int m2 = dest.compareTo(m.getDest());
+
+        System.out.println("sources: "+m1);
+        System.out.println("dest: "+m2);
+
+//        if (m1 == 0 && m2 == 0) return 0;
+
+        return m1 + m2;
     }
 
     @Override

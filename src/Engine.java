@@ -11,12 +11,32 @@ public class Engine {
     }
 
     public static int numNodesProcessed = 0;
+    public static int bestMovesCalled = 0;
 
 
     // sometimes doesn't play a move?
     // sometimes plays slightly worse move for rng
     public static Move getBestMove(Board board, int depth, boolean isWhiteTurn) {
+        bestMovesCalled++;
         double eval;
+
+        // GET OPENING BOOK MOVE HERE
+        // need to convert move history to uci
+        // [e2 e4, e7 e5] ==> e2e4 e7e5
+
+        // plays up to 5 moves of opening theory per side
+        // temporarily disabled
+        if (board.getMoveNumber() < 18) {
+            Move openingMove = OpeningBook.getMoveOpening(board);
+            if (openingMove != null) {
+                System.out.println("STILL THEORY: "+openingMove);
+                return openingMove;
+            }
+        }
+
+        System.out.println("NO LONGER THEORY");
+
+
         ArrayList<Move> pickableMoves = new ArrayList<>();
         double maxEval = isWhiteTurn ? -100000 : 100000;
         Move bestMove = null;
@@ -27,6 +47,7 @@ public class Engine {
         for (Move m : allMoves) {
             Board newB = new Board(board);
             if (!newB.move(m)) {
+                System.out.println("removing move..");
                 allCheckLegalMoves.remove(m);
             }
         }
@@ -41,19 +62,24 @@ public class Engine {
                     board.whiteWins = true;
                 }
             } else {
+                System.out.println("ERROR CANNOT PLAY A MOVE WHYYYY");
                 return null;
             }
 
             // might find a checkmate in analysis but not actually be there
         }
 
+        // only tests real moves from current position
         for (Move m : allCheckLegalMoves) {
             // should call inCheck() here instead of in Board
             Board newB = new Board(board);
+            // SOLVE THE NOT MOVING PROBLEM??
             newB.move(m);
 
             // error if none in allCheckLegalMoves
 
+            // if this position already exists in the db, dont call Minimax
+            // not here tho?
             eval = Engine.minimax(newB, depth, !isWhiteTurn,-1000000, 1000000);
             if (isWhiteTurn) {
                 if (eval > maxEval) {
@@ -75,8 +101,8 @@ public class Engine {
         }
         // 50/50 chance of picking a pickableMove or bestMove
         Move randomGoodMove = pickableMoves.get((int)Math.floor(Math.random()*pickableMoves.size()));
-//        return bestMove;
-        return Math.random() > .3 ? bestMove : randomGoodMove;
+//        return Math.random() > .3 ? bestMove : randomGoodMove;
+        return bestMove;
     }
 
     // MINIMAX ALGORITHM
@@ -90,7 +116,18 @@ public class Engine {
 
             }
             // always only one move
-            return evaluate(board);
+            // check if in hashtable here before evaluate()
+            // this gets bad moves bc collisions
+//            Board inTable = Board.gameStates.get(board.hashCode());
+//            if (inTable != null) {
+//                // don't eval, just leave
+//                return inTable.eval;
+//            }
+
+            board.eval = evaluate(board);
+            // here, store board in hash
+//            Board.gameStates.put(board.hashCode(), board);
+            return board.eval;
         }
 
         double value;
@@ -148,6 +185,7 @@ public class Engine {
     }
 
     public static double evaluate(Board board) {
+        timesEvaluated++;
         // should just have an array of pieces with self contained position (faster)
         // we can make this WAY faster with each piece's location (not reliant on board)
         double eval = 0.0;
@@ -164,6 +202,8 @@ public class Engine {
             TODO: Theoretical openings (advanced)
             TODO: Endgame tables
          */
+
+        // bonus for king out of center
 
         // file, rank
         for (int i = 1; i <= 8; i++) {
@@ -199,7 +239,9 @@ public class Engine {
 
     // testing a second heuristic based on claude shannon's 1949 paper
     // always evaluates in relation to white
+    public static int timesEvaluated = 0;
     public static double evaluate2(Board board) {
+        timesEvaluated++;
         double eval = 0.0;
         int whQueen = 0;
         int whRook = 0;
@@ -207,6 +249,11 @@ public class Engine {
         int whPawn = 0;
         // control of center, pos = advantage white
         double centerFight = 0.0;
+
+        // cant find the king??
+        // maybe king gets captured in shit
+        double whKingSafety = board.findKingStr(true).getFile() > 4 ? 1 : 0;
+        double blKingSafety = board.findKingStr(false).getFile() > 4 ? -1 : 0;
 
         for (int i = 1; i <= 8; i++) {
             for (int j = 1; j <= 8; j++) {
@@ -242,8 +289,9 @@ public class Engine {
         int whMobility = 0;
         int blMobility = 0;
 
-        eval = 9*whQueen + 5*whRook + 3*whBishopKnight + whPawn + .1*(whMobility-blMobility) + centerFight;
+        eval = 9*whQueen + 5*whRook + 3*whBishopKnight + whPawn + .1*(whMobility-blMobility) + centerFight + whKingSafety + blKingSafety;
 
+        board.eval = eval;
         return eval;
     }
 }

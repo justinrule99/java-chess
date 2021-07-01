@@ -12,11 +12,14 @@ public class Rook extends Piece {
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
+        isLegalMovesCalls++;
         // inCheck needs to be nonreliant on getpossiblemoves (recursion)
 
         // rook must move straight line, unobstructed
         // srcrank == destrank OR srcfile == destfile no exceptions
         Piece sourcePiece = board.getSquare(src).getCurrentPiece();
+        Piece destPiece = board.getSquare(dest).getCurrentPiece();
+        if (destPiece instanceof King) return false;
 
         // refactor to be shared later
         int srcRank = (int) src.charAt(1) - 48;
@@ -24,6 +27,8 @@ public class Rook extends Piece {
 
         int srcFile = (int) src.charAt(0) - 96;
         int destFile = (int) dest.charAt(0) - 96;
+
+
 
         // legal movement
         if (srcRank == destRank) {
@@ -46,7 +51,6 @@ public class Rook extends Piece {
                 for (int i = srcFile+1; i <= destFile ; i++) {
                     Piece movingThrough = board.getSquare(i, srcRank).getCurrentPiece();
                     if (movingThrough != null) {
-//                        System.out.println("moveing theoh a pic HORIZ: "+src+" thru "+dest);
                         if (movingThrough.isWhite() == sourcePiece.isWhite()) {
                             return false;
                         } else {
@@ -64,7 +68,6 @@ public class Rook extends Piece {
                 // going "down"
                 for (int i = srcRank-1; i >= destRank; i--) {
                     Piece movingThrough = board.getSquare(srcFile, i).getCurrentPiece();
-//                    System.out.println("moveing theoh a pic: "+src+" thru "+dest+", TYPE: "+movingThrough);
 
                     if (movingThrough != null) {
                         if (movingThrough.isWhite() == sourcePiece.isWhite()) {
@@ -91,16 +94,6 @@ public class Rook extends Piece {
 
             // cannot move INTO check
             // simulate move
-//            Board afterMove = new Board(board);
-//            afterMove.move(src, dest);
-//            if (afterMove.inCheck()) return false;
-
-            // gone through entire move, no problems
-//            if (board.inCheck()) return false;
-//            Board simAfter = new Board(board);
-//            simAfter.move(src, dest, false);
-//            if (simAfter.inCheck()) return false;
-
             return true;
         }
 

@@ -12,7 +12,8 @@ public class Knight extends Piece{
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
-
+        isLegalMovesCalls++;
+        isLegalMoveKnight++;
 
         // can jump. moves 2 squares one direction, one square perpendicular to first direction.
 
@@ -22,13 +23,14 @@ public class Knight extends Piece{
         int srcFile = (int) src.charAt(0) - 96;
         int destFile = (int) dest.charAt(0) - 96;
 
+
         Piece pieceToMove = board.getSquare(src).getCurrentPiece();
         // abs dist src/dest rank == 1 and abs dist file == 2 OR other way around
         if ((Math.abs(srcRank-destRank) == 2 && Math.abs(srcFile-destFile) == 1) || (Math.abs(srcRank-destRank) == 1 && Math.abs(srcFile-destFile) == 2)) {
             // deal with self collisions, then captures
             Piece destPiece = board.getSquare(dest).getCurrentPiece();
             if (destPiece != null) {
-                return !destPiece.isWhite() == pieceToMove.isWhite();
+                return !destPiece.isWhite() == pieceToMove.isWhite() && !(destPiece instanceof King);
             }
             return true;
         }

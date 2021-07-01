@@ -1,11 +1,20 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Board {
     // represents a standard chess board
+    // keep track of eval to form hashtable
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN = "\u001B[32m";
     public static final String ANSI_WHITE = "\u001B[37m";
+
+    // probably unused
+    public static HashMap<Integer, Board> gameStates = new HashMap<>();
+
+    // faster to keep each piece with current location instead of all squares??
+    private Piece[] whitePieces;
+    private Piece[] blackPieces;
 
     // 2d array of squares: will have piece info
     private Square[][] squares;
@@ -13,14 +22,14 @@ public class Board {
     private boolean whiteToMove;
     public boolean whiteWins = false;
     public boolean blackWins = false;
-    // making shallow copies of king somewhere?
-    public King whiteKing = new King(true);
-    public King blackKing = new King(false);
+    public String whiteKing = "e1";
+    public String blackKing = "e8";
     private ArrayList<Move> moveHistory;
     public boolean whiteCanCastleQ = true;
     public boolean whiteCanCastleK = true;
     public boolean blackCanCastleQ = true;
     public boolean blackCanCastleK = true;
+    public double eval = 0.0;
 
     public Board(Board b, boolean switchTurn) {
         this(b);
@@ -29,7 +38,10 @@ public class Board {
         }
     }
 
+    public static int copyContstructorCalls = 0;
+
     public Board(Board b) {
+        copyContstructorCalls++;
         // implement a findKing(color) method for prev board
         // shallow copy
         squares = new Square[8][8];
@@ -53,6 +65,10 @@ public class Board {
         // b move history is always empty
         // need to copy moveHistory
         this.moveHistory.addAll(b.moveHistory);
+
+        whiteKing = b.whiteKing;
+        blackKing = b.blackKing;
+
         moveNumber = b.moveNumber;
         whiteToMove = b.whiteToMove;
         whiteWins = b.whiteWins;
@@ -61,6 +77,7 @@ public class Board {
         whiteCanCastleK = b.whiteCanCastleK;
         blackCanCastleQ = b.blackCanCastleQ;
         blackCanCastleK = b.blackCanCastleK;
+        eval = b.eval;
     }
 
     // initialize the game with pieces on starting squares
@@ -91,10 +108,8 @@ public class Board {
                     } else if (j == 3) {
                         squares[i][j] = new Square(isWhite, new Queen(i == 0), i,j);
                     } else {
-                        Square e1 = new Square(isWhite, whiteKing , i,j);
-                        Square e8 = new Square(isWhite, blackKing , i,j);
-                        whiteKing.setCurrentSquare(e1);
-                        blackKing.setCurrentSquare(e8);
+                        Square e1 = new Square(isWhite, new King(i == 0) , i,j);
+                        Square e8 = new Square(isWhite, new King(i == 0) , i,j);
 
                         if (i == 0) {
                             squares[i][j] = e1;
@@ -126,9 +141,10 @@ public class Board {
         return whiteToMove;
     }
 
+    // buggy if you move out of turn
     public void handleCastle(boolean kingside) {
-        // have iswhite, move pieces here
         // know legal move
+//        System.out.println("is white moving: "+isWhiteToMove());
         int r = isWhiteToMove() ? 0 : 7;
         if (isWhiteToMove()) {
             whiteCanCastleQ = false;
@@ -140,22 +156,46 @@ public class Board {
         Piece king = squares[r][4].getCurrentPiece();
         Piece rook = squares[r][kingside ? 7 : 0].getCurrentPiece();
 
+        squares[r][4].setCurrentPiece(null);
+
         if (kingside) {
-            squares[r][4].setCurrentPiece(null);
             squares[r][7].setCurrentPiece(null);
             squares[r][6].setCurrentPiece(king);
             squares[r][5].setCurrentPiece(rook);
         } else {
-            squares[r][4].setCurrentPiece(null);
             squares[r][0].setCurrentPiece(null);
             squares[r][2].setCurrentPiece(king);
             squares[r][3].setCurrentPiece(rook);
         }
-
     }
 
     public boolean move(Move m) {
+//        boolean moveSuccess = move(m.getSrc(), m.getDest(), false);
+//        if (!moveSuccess) {
+//            return move(m.getSrc(), m.getDest(), false);
+//        }
+//        return moveSuccess;
         return move(m.getSrc(), m.getDest(), false);
+    }
+
+    public static int timesEnteredMove = 0;
+    public static int timesMoved = 0;
+
+    // absolute garbage, no error checking
+    // but we need it for speed and preventing accidental recursion
+    public boolean forceMove(String source, String dest) {
+        int srcFile = codeToFile(source);
+        int srcRank = codeToRank(source);
+        int destFile = codeToFile(dest);
+        int destRank = codeToRank(dest);
+
+
+        Piece movingPiece = squares[srcRank-1][srcFile-1].getCurrentPiece();
+
+        squares[srcRank-1][srcFile-1].setCurrentPiece(null);
+        whiteToMove = !whiteToMove;
+        squares[destRank-1][destFile-1].setCurrentPiece(movingPiece);
+        return true;
     }
 
     // if in check, move must resolve check
@@ -165,7 +205,12 @@ public class Board {
         int srcRank = codeToRank(source);
         int destFile = codeToFile(dest);
         int destRank = codeToRank(dest);
-        // castling:
+
+        // dont let you move a piece if its not your turn
+        timesEnteredMove++;
+
+        // with piece array: would be
+
 
         // indices always rank, file
         // illegal move if no piece on source
@@ -175,12 +220,13 @@ public class Board {
             return false;
         }
 
+        // error with inCheck params: when to flip?
         if (movingPiece.isLegalMove(source, dest, this)) {
-            if (!skipChecks && inCheck()) {
+            if (!skipChecks && inCheck(false)) {
                 Board testBoard = new Board(this, true);
 
                 testBoard.move(source, dest, true);
-                if (testBoard.inCheck()) {
+                if (testBoard.inCheck(false)) {
                     return false;
                 }
             }
@@ -188,9 +234,18 @@ public class Board {
             if (movingPiece instanceof King && Math.abs(srcFile-destFile) >= 2) {
                 handleCastle(destFile-srcFile == 2);
                 moveHistory.add(new Move(source, dest));
+                whiteToMove = !whiteToMove;
                 moveNumber++;
+                timesMoved++;
                 return true;
-                // might return from here if all moves handled
+            }
+
+            if (movingPiece instanceof King) {
+                if (whiteToMove) {
+                    whiteKing = dest;
+                } else {
+                    blackKing = dest;
+                }
             }
 
             squares[srcRank-1][srcFile-1].setCurrentPiece(null);
@@ -198,18 +253,14 @@ public class Board {
 
             whiteToMove = !whiteToMove;
             squares[destRank-1][destFile-1].setCurrentPiece(movingPiece);
-            // need to ignore move
-            if (movingPiece instanceof King) {
-                if (movingPiece.isWhite()) {
 
-                    whiteKing.setCurrentSquare(getSquare(dest));
-                } else {
-                    blackKing.setCurrentSquare(getSquare(dest));
-                }
-            }
             movingPiece.setCurrentSquare(getSquare(dest));
 
-            // handle pawn promotion here (auto queen)
+            // handle pawn promotion here (auto queen probably)
+            if (movingPiece instanceof Pawn && (destRank == 8 || destRank == 1)) {
+                // movingPiece is at end, change to queen
+                squares[destRank-1][destFile-1].setCurrentPiece(new Queen(!whiteToMove));
+            }
 
             moveHistory.add(new Move(source, dest));
             moveNumber++;
@@ -218,6 +269,7 @@ public class Board {
             return false;
         }
 
+        timesMoved++;
         return true;
     }
 
@@ -244,15 +296,20 @@ public class Board {
 
     // are YOU in check? if yes, ret true
     // need to prevent moving into check
-    public boolean inCheck() {
-
-        Square kingSquare = findKing(whiteToMove);
+    public boolean inCheck(boolean flip) {
+        // whiteToMove innacurate for moving into check
+        boolean turn = whiteToMove;
+        if (flip) {
+            turn = !whiteToMove;
+        }
+//        Square kingSquare = findKing(whiteToMove);
+        Square kingSquare = findKingStr(turn);
         if (kingSquare == null) {
             return false;
         }
 
         // all possible moves for hypothetical next turn (aka: under attack)
-        ArrayList<Move> moves = Engine.getAllPossibleMoves(this, !whiteToMove);
+        ArrayList<Move> moves = Engine.getAllPossibleMoves(this, !turn);
 
         for (Move m : moves) {
             if (m.getDest().equals(kingSquare.toString())) {
@@ -270,25 +327,28 @@ public class Board {
     }
 
     // if input "e2", output is "e3" and "e4"
-    // runs every time engine processes a node
+    // THIS RUNS (numPieces) TIMES WHEN GETTING ALL LEGAL MOVES INEFFICIENT AF
+    // need to optimize, don't check every square for all pieces (ex: if srcsquare pawn, only check where max distance is 2
+    public static int getLegalMovesCalled = 0;
     public ArrayList<Move> getLegalMoves(String srcSquare) {
         ArrayList<Move> possibleMoves = new ArrayList<>();
-        // for one pawn, look at legal moves (pawn on e2)
-        for (int i = 0; i < 8; i++) { // file
-            for (int j = 0; j < 8; j++) { // rank
-                // check if alg notation legal move
-                StringBuilder algNot = new StringBuilder();
-                // convert i to a-g, j to 1-8
-                algNot.append((char) (97+i));
+        getLegalMovesCalled++;
 
-                algNot.append(j+1);
-                if (getSquare(srcSquare).getCurrentPiece() == null) {
-                    return possibleMoves;
-                }
-                if (srcSquare.equals(algNot.toString())) continue;
+        if (getSquare(srcSquare).getCurrentPiece() == null) {
+            return possibleMoves;
+        }
 
-                if (getSquare(srcSquare).getCurrentPiece().isLegalMove(srcSquare, algNot.toString(), this)) {
-                    possibleMoves.add(new Move(srcSquare, algNot.toString()));
+        // for one piece, look at legal moves (pawn on e2)
+        // optimizations: bishops stay on color, pawns don't move more than 2, rooks stay on rank or file
+        for (int i = 1; i <= 8; i++) { // file
+            for (int j = 1; j <= 8; j++) { // rank
+                String destSquare = rankAndFileToCode(j,i);
+                Piece piece = getSquare(srcSquare).getCurrentPiece();
+
+                if (srcSquare.equals(destSquare)) continue;
+
+                if (piece.isLegalMove(srcSquare, destSquare, this)) {
+                    possibleMoves.add(new Move(srcSquare, destSquare));
                 }
             }
         }
@@ -307,22 +367,31 @@ public class Board {
         return squares[rank-1][file-1];
     }
 
-    // [rank][file]
-    public Square findKing(boolean white) {
-        for (int i = 7; i >= 0; i--) {
-            for (int j = 0; j < 8; j++) {
-                Piece curPiece = squares[i][j].getCurrentPiece();
-                if (curPiece == null) {
-                    continue;
-                }
-                if (curPiece.isKing) {
-                    if (white == curPiece.isWhite()) {
-                        return squares[i][j];
-                    }
-                }
-            }
+    public int distance(String src, String dest) {
+        // returns optimal distance between two squares (only if straight or diagonal)
+        int srcRank = (int) src.charAt(1) - 48;
+        int destRank = (int) dest.charAt(1) - 48;
+
+        int srcFile = (int) src.charAt(0) - 96;
+        int destFile = (int) dest.charAt(0) - 96;
+
+        int rankPart = (destRank-srcRank)*(destRank-srcRank);
+        int filePart = (destFile-srcFile)*(destFile-srcFile);
+        double dist = Math.sqrt(rankPart + filePart);
+        if (dist != Math.floor(dist)) return -1;
+
+
+        return (int) dist;
+    }
+
+
+    // get whole square from string
+    public Square findKingStr(boolean white) {
+        if (white) {
+            return getSquare(whiteKing);
+        } else {
+            return getSquare(blackKing);
         }
-        return null;
     }
 
     @Override
@@ -333,7 +402,8 @@ public class Board {
             for (int j = 1; j <= 8; j++) {
                 Piece p = getSquare(i,j).getCurrentPiece();
                 if (p != null) {
-                    code += (p.getValue()*i*j);
+                    // since 1 for all pawns, many possible duplicates
+                    code += (p.getValue()*(i+1)*(j+9));
                 }
             }
         }
@@ -351,17 +421,6 @@ public class Board {
                 if (curPiece == null) {
                     boardString.append("_");
                 } else {
-
-                    if (curPiece.isKing) {
-                        System.out.println(i);
-                        System.out.println(j);
-                        if (curPiece.isWhite()) {
-                            whiteKing.setCurrentSquare(squares[i][j]);
-                        } else {
-                            blackKing.setCurrentSquare(squares[i][j]);
-                        }
-                    }
-
                     if (squares[i][j].getCurrentPiece().isWhite()) {
                         boardString.append(ANSI_WHITE);
                     } else {
@@ -382,8 +441,8 @@ public class Board {
             boardString.append(" ");
         }
 
-        System.out.println(whiteKing.getCurrentSquare());
-        System.out.println(blackKing.getCurrentSquare());
+        System.out.println(whiteKing);
+        System.out.println(blackKing);
         return boardString.toString();
     }
 }

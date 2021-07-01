@@ -17,10 +17,7 @@ public class Queen extends Piece{
         Piece b = new Bishop(isWhite());
         Piece r = new Rook(isWhite());
 
-        if (b.isLegalMove(src, dest, board) || r.isLegalMove(src, dest, board)) return true;
-
-
-        return false;
+        return b.isLegalMove(src, dest, board) || r.isLegalMove(src, dest, board);
     }
 
     @Override

@@ -8,21 +8,22 @@ public abstract class Piece {
     protected boolean white;
     protected int value;
     // not necessary if we can use instanceOf
-    protected boolean isKing;
 
     public Piece(boolean white) {
         this.white = white;
-        this.isKing = false;
-//        this.isKing = isKing;
     }
 
     // how to define movement behavior
+    public static int isLegalMovesCalls = 0;
+    public static int isLegalMovePawn = 0;
+    public static int isLegalMoveKnight = 0;
+    public static int isLegalMoveKing = 0;
 
     public boolean isLegalMove(String src, String dest, Board board) {
         // see if move resolves check (if in check)?
         System.out.println("SUPER H");
         // super, does this run on children?
-        if (board.inCheck()) return false;
+        if (board.inCheck(false)) return false;
 
         // do move on new board, check if in check (cannot move into check)
         return true;

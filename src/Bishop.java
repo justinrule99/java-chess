@@ -12,7 +12,7 @@ public class Bishop extends Piece{
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
-
+        isLegalMovesCalls++;
 
         // moves diagonally, forwards and backwards. always stays on the same colored square
 
@@ -35,19 +35,16 @@ public class Bishop extends Piece{
             // cases: rank+file+, rank-file-, rank+file-, rank-file+
             if (srcRank > destRank && srcFile > destFile) {
                 // rank-file-
-                // doesn't work
-                // down left
                 for (int i = 0; i < srcRank-destRank-1; i++) {
                     // false if collision
                     Piece movingThrough = board.getSquare(srcFile-i-1, srcRank-i-1).getCurrentPiece();
                     if (movingThrough != null) {
-//                        System.out.println("--Collision! at "+board.rankAndFiletoCode(srcRank-i-1, srcFile-i-1));
                         return false;
                     }
                 }
                 Piece destPiece = board.getSquare(dest).getCurrentPiece();
                 if (destPiece != null) {
-                    return destPiece.isWhite() != srcPiece.isWhite();
+                    return destPiece.isWhite() != srcPiece.isWhite() && !(destPiece instanceof King);
                 }
                 return true;
 

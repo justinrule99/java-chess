@@ -14,7 +14,8 @@ public class Pawn extends Piece {
 
     @Override
     public boolean isLegalMove(String src, String dest, Board board) {
-
+        isLegalMovesCalls++;
+        isLegalMovePawn++;
 
 //        int srcRank = (int) src.charAt(1);
         int srcRank = (int) src.charAt(1) - 48;
@@ -29,9 +30,8 @@ public class Pawn extends Piece {
             // check distance FIRST, ret false if bad
             // still need to move a pawn twice if on second rank??
             int maxDistance = srcRank == 2 ? 2 : 1;
-            if ((int) dest.charAt(1) <= (int) src.charAt(1) || (int) dest.charAt(1) > ((int) src.charAt(1))+maxDistance) {
-                // also check collisions straight ahead
 
+            if (destRank <= srcRank || destRank > srcRank+maxDistance) {
                 return false;
             }
 
@@ -49,26 +49,26 @@ public class Pawn extends Piece {
                 }
             }
 
+            Piece destPiece = board.getSquare(dest).getCurrentPiece();
+
             // if exists piece in path and is same color
-            if (board.getSquare(dest).getCurrentPiece() != null) {
+            if (destPiece != null) {
                 return false;
             }
 
-            if (board.getSquare(dest).getCurrentPiece() == null) {
-                return srcFile == destFile;
-            }
+            return srcFile == destFile;
 
         } else { // black pawn
             // only moves up one square at a time or two
             int maxDistance = srcRank == 7 ? 2 : 1;
             // allow 2 or 1??
             // bad if diff between src rank and dest rank is > maxDistance
-            if ((int) src.charAt(1) < (int) dest.charAt(1)) {
+            if (srcRank < destRank) {
                 // also check collisions straight ahead
                 return false;
             }
 
-            if ((int) dest.charAt(1) < ((int) src.charAt(1))-maxDistance) {
+            if (destRank < srcRank-maxDistance) {
                 return false;
             }
 
@@ -84,17 +84,15 @@ public class Pawn extends Piece {
                 }
             }
 
+            Piece destPiece = board.getSquare(dest).getCurrentPiece();
+
             // if exists piece in path and is same color
-            if (board.getSquare(dest).getCurrentPiece() != null) {
+            if (destPiece != null) {
                 return false;
             }
 
-            if (board.getSquare(dest).getCurrentPiece() == null) {
-                return srcFile == destFile;
-            }
+            return srcFile == destFile;
         }
-        // check if move creates a discovered check
-        return false;
     }
 
 
